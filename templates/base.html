@@ -1,0 +1,46 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Celo{% endblock %} · Celo Food &amp; Refreshment Hub</title>
+  <link rel="stylesheet" href="{% static 'css/celo.css' %}">
+</head>
+<body>
+<header class="topbar">
+  <a href="{% url 'dashboard:home' %}" aria-label="Celo home">
+    <svg class="logo" viewBox="0 0 100 100" role="img" aria-label="Celo">
+      <path d="M78 22 A40 40 0 1 0 82 74" fill="none" stroke="#f01c1c" stroke-width="12" stroke-linecap="round"/>
+      <text x="50" y="62" text-anchor="middle" font-size="30" font-weight="700" fill="#fff" font-family="Inter, system-ui, sans-serif">Celo</text>
+    </svg>
+  </a>
+  {% if user.is_authenticated %}
+  <details class="menu">
+    <summary aria-label="Menu"><span></span><span></span><span></span></summary>
+    <nav>
+      <a href="{% url 'dashboard:home' %}">Overview</a>
+      <a href="{% url 'inventory:stock' %}">Inventory</a>
+      <a href="{% url 'sales:list' %}">Sales</a>
+      <a href="{% url 'sales:customers' %}">Customers</a>
+      <a href="{% url 'inventory:waste' %}">Waste</a>
+      {% if user.is_celo_admin %}
+        <hr>
+        <a href="{% url 'finance:expenses' %}">Finance</a>
+        <a href="{% url 'finance:payroll' %}">Payroll</a>
+        <a href="{% url 'dashboard:reports' %}">Reports</a>
+        <a href="{% url 'inventory:products' %}">Products &amp; menu</a>
+        <a href="{% url 'dashboard:audit' %}">Audit log</a>
+      {% endif %}
+      <hr>
+      <div class="who">{{ user.get_full_name|default:user.username }} · {{ user.get_role_display }}</div>
+      <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Log out</button></form>
+    </nav>
+  </details>
+  {% endif %}
+</header>
+<main>
+  {% if messages %}<ul class="msgs" role="status">{% for m in messages %}<li class="{{ m.tags }}">{{ m }}</li>{% endfor %}</ul>{% endif %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

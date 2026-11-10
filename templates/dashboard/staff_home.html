@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% load humanize %}
+{% block title %}My performance{% endblock %}
+{% block content %}
+<div class="kpis">
+  <div class="kpi"><div class="label">My sales today</div><div class="value">₱{{ today_total|floatformat:"-2"|intcomma }}</div><div class="hint">{{ today_count }} order{{ today_count|pluralize }}</div></div>
+  <div class="kpi"><div class="label">My sales, last 15 days</div><div class="value">₱{{ period_total|floatformat:"-2"|intcomma }}</div><div class="hint">{{ period_count }} order{{ period_count|pluralize }}</div></div>
+</div>
+<div class="panel">
+  <div class="head"><h2>Recent orders</h2><a class="btn" href="{% url 'sales:new' %}">+ New sale</a></div>
+  {% for o in recent %}<div class="list-row"><span><strong>#{{ o.number }} · {{ o.label }}</strong><div class="sub">{{ o.summary }}</div></span><strong>₱{{ o.total|floatformat:"-2"|intcomma }}</strong></div>
+  {% empty %}<p class="sub">No orders yet. Start with a new sale.</p>{% endfor %}
+</div>
+{% endblock %}

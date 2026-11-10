@@ -1,0 +1,23 @@
+{% extends "base.html" %}{% load humanize %}
+{% block title %}Receipt #{{ order.number }}{% endblock %}
+{% block content %}
+<div class="receipt">
+  <div style="text-align:center"><strong>Celo Food &amp; Refreshment Hub</strong><br>Patag, Cagayan de Oro</div>
+  <hr>
+  <div class="r"><span>Order #{{ order.number }}</span><span>{{ order.created_at|date:"M d Y g:i A" }}</span></div>
+  <div class="r"><span>{{ order.get_order_type_display }} · {{ order.get_payment_method_display }}</span><span>{{ order.customer|default:"" }}</span></div>
+  <hr>
+  {% for i in items %}
+    <div class="r"><span>{{ i.quantity|floatformat:"-2" }}× {{ i.product.name }}</span><span>₱{{ i.line_total|floatformat:2|intcomma }}</span></div>
+  {% endfor %}
+  <hr>
+  <div class="r"><strong>TOTAL</strong><strong>₱{{ order.total|floatformat:2|intcomma }}</strong></div>
+  <hr>
+  <div style="text-align:center">Cashier: {{ order.created_by.get_full_name|default:order.created_by.username }}<br>Thank you!</div>
+</div>
+<div class="actions noprint" style="justify-content:center;margin-top:14px">
+  <a class="btn ghost" href="{% url 'sales:list' %}">Back to sales</a>
+  <a class="btn" href="{% url 'sales:new' %}">New sale</a>
+  <button class="btn" onclick="window.print()">Print receipt</button>
+</div>
+{% endblock %}

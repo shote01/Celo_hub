@@ -1,0 +1,29 @@
+{% extends "base.html" %}{% load humanize %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="head"><div><p class="eyebrow">{{ start|date:"M d, Y" }} – {{ end|date:"M d, Y" }}</p><h2>Sales reports</h2></div>
+    <div class="tools">
+      <a class="pill {% if period == 'daily' %}on{% endif %}" href="?period=daily">Daily</a>
+      <a class="pill {% if period == 'weekly' %}on{% endif %}" href="?period=weekly">Weekly</a>
+      <a class="pill {% if period == 'monthly' %}on{% endif %}" href="?period=monthly">Monthly</a>
+      <a class="pill {% if period == 'yearly' %}on{% endif %}" href="?period=yearly">Yearly</a>
+      <a class="btn small" href="?period={{ period }}&format=csv">Download CSV</a>
+    </div></div>
+  <table>
+    <thead><tr><th>Period starting</th><th class="num">Orders</th><th class="num">Gross sales</th></tr></thead>
+    <tbody>{% for r in rows %}<tr><td>{{ r.bucket|date:"M d, Y" }}</td><td class="num">{{ r.orders }}</td><td class="num">₱{{ r.total|floatformat:"-2"|intcomma }}</td></tr>
+    {% empty %}<tr><td colspan="3">No sales in this range.</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+<div class="grid2">
+  <div class="panel"><h2>Bestsellers</h2>
+    {% for t in top %}<div class="list-row"><strong>{{ t.product__name }}</strong><span class="sub">{{ t.sold|floatformat:"-2" }} sold</span></div>{% empty %}<p class="sub">No data.</p>{% endfor %}</div>
+  <div class="panel breakdown"><h2 style="margin-bottom:8px">Accounting for this range</h2>
+    <div class="line"><span>Gross sales</span><strong>₱{{ b.gross|floatformat:"-2"|intcomma }}</strong></div>
+    <div class="line"><span>Waste</span><strong>− ₱{{ b.waste|floatformat:"-2"|intcomma }}</strong></div>
+    <div class="line"><span>Expenses</span><strong>− ₱{{ b.expenses|floatformat:"-2"|intcomma }}</strong></div>
+    <div class="line"><span>Payroll</span><strong>− ₱{{ b.payroll|floatformat:"-2"|intcomma }}</strong></div>
+    <div class="total"><span>Net income</span><span>₱{{ b.net|floatformat:"-2"|intcomma }}</span></div></div>
+</div>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}{% load humanize %}
+{% block title %}Payroll{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="head"><div><p class="eyebrow">Payroll + cash advances</p><h2>Employee payroll</h2></div>
+    <div class="tools">
+      <a class="btn ghost small" href="{% url 'finance:employee_new' %}">+ Employee</a>
+      <a class="btn ghost small" href="{% url 'finance:advance_new' %}">+ Cash advance</a>
+      <a class="btn" href="{% url 'finance:payroll_new' %}">+ Add record</a>
+    </div></div>
+  <table><tbody>
+  {% for r in rows %}
+    <tr><td><strong>{{ r.emp.name }}</strong>
+        <div class="sub">{{ r.emp.position }} · ₱{{ r.emp.salary|floatformat:"-2"|intcomma }} salary · ₱{{ r.advance|floatformat:"-2"|intcomma }} advance</div></td>
+        <td class="num">{% if r.last %}₱{{ r.last.net_pay|floatformat:"-2"|intcomma }}<div class="sub">net · {{ r.last.created_at|date:"M d" }}</div>{% else %}<span class="sub">No record yet</span>{% endif %}</td>
+        <td class="num"><a class="btn small ghost" href="{% url 'finance:employee_edit' r.emp.pk %}">Edit</a></td></tr>
+  {% empty %}<tr><td>No employees yet.</td></tr>{% endfor %}
+  </tbody></table>
+</div>
+
+<div class="panel">
+  <h2 style="margin-bottom:8px">Payroll history</h2>
+  <table>
+    <thead><tr><th>Employee</th><th>Period</th><th class="num">Gross pay</th><th class="num">Advances</th><th class="num">Net pay</th><th></th></tr></thead>
+    <tbody>
+    {% for rec in records %}
+      <tr><td>{{ rec.employee.name }}<div class="sub">{{ rec.get_pay_type_display }}{% if rec.pay_type == 'percentage' %} · {{ rec.value|floatformat:"-2" }}%{% endif %}</div></td>
+          <td>{{ rec.period_start|date:"M d" }} – {{ rec.period_end|date:"M d" }}</td>
+          <td class="num">₱{{ rec.amount|floatformat:"-2"|intcomma }}</td>
+          <td class="num">₱{{ rec.advance_deducted|floatformat:"-2"|intcomma }}</td>
+          <td class="num">₱{{ rec.net_pay|floatformat:"-2"|intcomma }}</td>
+          <td class="num"><a class="btn small" href="{% url 'finance:payroll_delete' rec.pk %}" aria-label="Delete record">×</a></td></tr>
+    {% empty %}<tr><td colspan="6">No payroll records yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}New sale{% endblock %}
+{% block content %}
+<form method="post" id="sale" class="pos" novalidate>
+  {% csrf_token %}
+  <div>
+    <div class="panel">
+      <div class="head" style="margin-bottom:8px"><div><p class="eyebrow">Counter + online</p><h1>New sale</h1></div></div>
+      {% if header.errors %}<ul class="errorlist" style="margin-bottom:8px"><li>Check the order details below.</li></ul>{% endif %}
+      <div class="pos-head">
+        <div class="field"><label for="{{ header.order_type.id_for_label }}">Order type</label>{{ header.order_type }}</div>
+        <div class="field"><label for="{{ header.payment_method.id_for_label }}">Payment</label>{{ header.payment_method }}</div>
+        <div class="field"><label for="{{ header.customer.id_for_label }}">Customer</label>{{ header.customer }}
+          <span class="help"><a href="{% url 'sales:customer_new' %}">Add a customer</a></span></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="head" style="margin-bottom:10px">
+        <h2>Menu</h2>
+        <input type="search" id="filter" placeholder="Search menu" aria-label="Search menu"
+               style="padding:9px 12px;border:1px solid var(--line);border-radius:6px;font:inherit;min-width:200px">
+      </div>
+      <div class="items">
+        {% for it in items %}
+        <div class="item {% if it.stock <= 0 %}out{% endif %} {% if it.qty %}selected{% endif %}"
+             data-name="{{ it.p.name|lower }}" data-price="{{ it.p.price }}" data-stock="{{ it.stock }}" data-title="{{ it.p.name }}">
+          <div class="item-top">
+            <strong>{{ it.p.name }}</strong>
+            <span class="price">₱{{ it.p.price|floatformat:"-2" }}</span>
+          </div>
+          <div class="sub">{{ it.p.category|default:"Menu" }} · {% if it.stock > 0 %}{{ it.stock|floatformat:"-2" }} in stock{% else %}Sold out{% endif %}</div>
+          <div class="stepper" role="group" aria-label="Quantity of {{ it.p.name }}">
+            <button type="button" class="step minus" aria-label="Remove one {{ it.p.name }}" {% if it.stock <= 0 %}disabled{% endif %}>−</button>
+            <input type="text" inputmode="numeric" pattern="[0-9]*" name="qty_{{ it.p.pk }}" value="{{ it.qty|default:'' }}"
+                   placeholder="0" aria-label="Quantity of {{ it.p.name }}" {% if it.stock <= 0 %}disabled{% endif %}>
+            <button type="button" class="step plus" aria-label="Add one {{ it.p.name }}" {% if it.stock <= 0 %}disabled{% endif %}>+</button>
+          </div>
+        </div>
+        {% empty %}
+        <p class="sub">No menu items yet. An admin can add them under Products &amp; menu.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <aside class="panel summary" aria-live="polite">
+    <p class="eyebrow">Order summary</p>
+    <div id="lines" class="lines"><p class="sub" id="empty">Nothing added yet. Tap + on a menu item.</p></div>
+    <div class="sum-total"><span>Total</span><strong id="total">₱0</strong></div>
+    <div class="actions">
+      <button type="button" class="btn ghost" id="clear">Clear</button>
+      <a class="btn ghost" href="{% url 'sales:list' %}">Cancel</a>
+      <button class="btn" type="submit" id="place">Place order</button>
+    </div>
+  </aside>
+</form>
+
+<script>
+(function () {
+  const form = document.getElementById('sale');
+  const cards = [...form.querySelectorAll('.item')];
+  const linesEl = document.getElementById('lines');
+  const fmt = n => '₱' + n.toLocaleString('en-PH', {maximumFractionDigits: 2});
+
+  const qtyOf = c => parseInt(c.querySelector('input').value, 10) || 0;
+  function setQty(c, n) {
+    const max = parseFloat(c.dataset.stock) || 0;
+    n = Math.max(0, Math.min(n, Math.floor(max)));
+    c.querySelector('input').value = n || '';
+    render();
+  }
+  function render() {
+    let total = 0, html = '', count = 0;
+    cards.forEach(c => {
+      const q = qtyOf(c), price = parseFloat(c.dataset.price) || 0;
+      c.classList.toggle('selected', q > 0);
+      if (q > 0) {
+        count += q; total += q * price;
+        html += '<div class="r"><span>' + q + '× ' + c.dataset.title.replace(/</g, '&lt;') + '</span><strong>' + fmt(q * price) + '</strong></div>';
+      }
+    });
+    linesEl.innerHTML = html || '<p class="sub">Nothing added yet. Tap + on a menu item.</p>';
+    document.getElementById('total').textContent = fmt(total);
+    document.getElementById('place').textContent = count ? 'Place order · ' + fmt(total) : 'Place order';
+  }
+  cards.forEach(c => {
+    c.querySelector('.plus').addEventListener('click', () => setQty(c, qtyOf(c) + 1));
+    c.querySelector('.minus').addEventListener('click', () => setQty(c, qtyOf(c) - 1));
+    c.querySelector('input').addEventListener('input', e => {
+      e.target.value = e.target.value.replace(/\D/g, '');
+      setQty(c, qtyOf(c));
+    });
+  });
+  document.getElementById('clear').addEventListener('click', () => cards.forEach(c => setQty(c, 0)));
+  document.getElementById('filter').addEventListener('input', e => {
+    const t = e.target.value.trim().toLowerCase();
+    cards.forEach(c => c.hidden = t && !c.dataset.name.includes(t));
+  });
+  // Enter inside a quantity box shouldn't submit the order by accident
+  form.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') e.preventDefault(); });
+  render();
+})();
+</script>
+{% endblock %}

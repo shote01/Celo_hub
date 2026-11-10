@@ -1,0 +1,34 @@
+{% extends "base.html" %}{% load humanize %}
+{% block title %}Overview{% endblock %}
+{% block content %}
+<div class="kpis">
+  <div class="kpi"><div class="label">Gross sales</div><div class="value">₱{{ b.gross|floatformat:"-2"|intcomma }}</div><div class="hint">Live ledger</div></div>
+  <div class="kpi"><div class="label">Net income</div><div class="value {% if b.net < 0 %}neg{% endif %}">₱{{ b.net|floatformat:"-2"|intcomma }}</div><div class="hint">After fixed costs</div></div>
+  <div class="kpi"><div class="label">FIFO / low stock</div><div class="value">{{ alerts.fifo|add:alerts.low }}</div><div class="hint">Needs review</div></div>
+  <div class="kpi"><div class="label">Waste cost</div><div class="value">₱{{ b.waste|floatformat:"-2"|intcomma }}</div><div class="hint">Included in accounting</div></div>
+</div>
+
+<div class="grid2">
+  <div class="panel">
+    <p class="eyebrow">15-day performance</p>
+    <div class="head"><h2>Sales pulse</h2><a class="btn small ghost" href="{% url 'dashboard:reports' %}">Reports →</a></div>
+    <div class="bars" role="img" aria-label="Gross sales per day for the last 15 days">
+      {% for d in series %}<div class="bar {% if d.low %}low{% endif %}" style="height:{{ d.height }}%" title="{{ d.date|date:'M d' }}: ₱{{ d.value|floatformat:'-2'|intcomma }}"></div>{% endfor %}
+    </div>
+    <div class="axis"><span>{{ b.start|date:"M d" }}</span><span>{{ b.end|date:"M d" }}</span></div>
+  </div>
+  <div>
+    <div class="panel">
+      <p class="eyebrow">Operating alerts</p><h2>Needs attention</h2>
+      <div class="alert-row"><div><strong>FIFO priority</strong><div class="sub">{{ alerts.fifo }} batch{{ alerts.fifo|pluralize:"es" }} near or past expiry.</div></div><a href="{% url 'inventory:stock' %}">View</a></div>
+      <div class="alert-row"><div><strong>Low stock</strong><div class="sub">{{ alerts.low }} item{{ alerts.low|pluralize }} at or under reorder level.</div></div><a href="{% url 'inventory:stock' %}">View</a></div>
+      <div class="alert-row"><div><strong>Payroll</strong><div class="sub">₱{{ alerts.advances|floatformat:"-2"|intcomma }} in cash advances outstanding.</div></div><a href="{% url 'finance:payroll' %}">View</a></div>
+    </div>
+    <div class="panel">
+      <p class="eyebrow">Bestseller analytics</p><h2>What moves</h2>
+      {% for t in top %}<div class="list-row"><strong>{{ t.product__name }}</strong><span class="sub">{{ t.sold|floatformat:"-2" }} sold</span></div>
+      {% empty %}<p class="sub">No sales in this period yet.</p>{% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

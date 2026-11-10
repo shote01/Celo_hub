@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Inventory{% endblock %}
+{% block content %}
+<div class="panel">
+  <form method="get" class="head">
+    <input type="search" name="q" value="{{ q }}" placeholder="Search product or batch" aria-label="Search product or batch"
+           style="flex:1;min-width:200px;padding:9px 12px;border:1px solid var(--line);border-radius:6px;font:inherit">
+    {% if kind %}<input type="hidden" name="kind" value="{{ kind }}">{% endif %}
+    <div class="tools">
+      <a class="pill {% if not kind %}on{% endif %}" href="?{% if q %}q={{ q|urlencode }}{% endif %}">All</a>
+      <a class="pill {% if kind == 'ingredient' %}on{% endif %}" href="?kind=ingredient{% if q %}&q={{ q|urlencode }}{% endif %}">Ingredients</a>
+      <a class="pill {% if kind == 'menu' %}on{% endif %}" href="?kind=menu{% if q %}&q={{ q|urlencode }}{% endif %}">Menu</a>
+      <a class="btn" href="{% url 'inventory:receive' %}">+ Receive stock</a>
+    </div>
+  </form>
+  <p class="eyebrow">Real-time FIFO ledger</p>
+  <h1 style="font-size:24px">Stock &amp; expiration</h1>
+</div>
+
+{% if show_menu %}
+<div class="panel">
+  <p class="eyebrow">Ready to sell</p>
+  <h2 style="margin-bottom:6px">Menu items</h2>
+  <table>
+    <thead><tr><th>Item</th><th>Price</th><th>On hand</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for p in menu %}
+      <tr>
+        <td><strong>{{ p.name }}</strong>{% if p.category %}<div class="sub">{{ p.category }}</div>{% endif %}</td>
+        <td>₱{{ p.price|floatformat:"-2" }}</td>
+        <td><strong>{{ p.on_hand|floatformat:"-2" }} {{ p.unit }}</strong>{% if p.reorder_level %}<div class="sub">Reorder {{ p.reorder_level|floatformat:"-2" }}</div>{% endif %}</td>
+        <td class="{% if p.status == 'Fresh' %}fresh{% else %}use-first{% endif %}">{{ p.status }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="4">{% if q %}No menu items match "{{ q }}".{% else %}No menu items yet.{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if show_ingredients %}
+<div class="panel">
+  <p class="eyebrow">Raw stock · first in, first out</p>
+  <h2 style="margin-bottom:6px">Ingredients</h2>
+  <table>
+    <thead><tr><th>Item</th><th>Expiry</th><th>On hand</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for p in ingredients %}
+      <tr>
+        <td><strong>{{ p.name }}</strong>{% if p.category %}<div class="sub">{{ p.category }}</div>{% endif %}</td>
+        <td>{{ p.next_expiry|date:"M d"|default:"—" }}</td>
+        <td><strong>{{ p.on_hand|floatformat:"-2" }} {{ p.unit }}</strong>{% if p.reorder_level %}<div class="sub">Reorder {{ p.reorder_level|floatformat:"-2" }}</div>{% endif %}</td>
+        <td class="{% if p.status == 'Fresh' %}fresh{% else %}use-first{% endif %}">{{ p.status }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="4">{% if q %}No ingredients match "{{ q }}".{% else %}No ingredients yet.{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

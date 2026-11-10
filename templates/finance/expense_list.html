@@ -1,0 +1,26 @@
+{% extends "base.html" %}{% load humanize %}
+{% block title %}Finance{% endblock %}
+{% block content %}
+<div class="panel breakdown" style="max-width:520px;margin-left:auto;margin-right:auto">
+  <p class="eyebrow">{{ b.start|date:"M d" }} – {{ b.end|date:"M d" }}</p>
+  <h2 style="margin-bottom:8px">Accounting breakdown</h2>
+  <div class="line"><span>Gross sales</span><strong>₱{{ b.gross|floatformat:"-2"|intcomma }}</strong></div>
+  <div class="line"><span>Waste</span><strong>− ₱{{ b.waste|floatformat:"-2"|intcomma }}</strong></div>
+  <div class="line hl"><span>Expenses</span><strong>− ₱{{ b.expenses|floatformat:"-2"|intcomma }}</strong></div>
+  <div class="line"><span>Payroll</span><strong>− ₱{{ b.payroll|floatformat:"-2"|intcomma }}</strong></div>
+  <div class="total"><span>Net income</span><span {% if b.net < 0 %}style="color:var(--red)"{% endif %}>₱{{ b.net|floatformat:"-2"|intcomma }}</span></div>
+</div>
+
+<div class="panel">
+  <div class="head"><div><p class="eyebrow">Utilities · rent · other</p><h2>Expense ledger</h2></div>
+    <a class="btn" href="{% url 'finance:expense_new' %}">+ Add record</a></div>
+  <table><tbody>
+  {% for e in expenses %}
+    <tr><td><strong>{{ e.get_category_display }}</strong><div class="sub">{{ e.description }}{% if e.description %} · {% endif %}{{ e.incurred_on|date:"M d" }}</div></td>
+        <td class="num">₱{{ e.amount|floatformat:"-2"|intcomma }}</td>
+        <td class="num"><a class="btn small ghost" href="{% url 'finance:expense_edit' e.pk %}">Edit</a>
+            <a class="btn small" href="{% url 'finance:expense_delete' e.pk %}" aria-label="Delete expense">×</a></td></tr>
+  {% empty %}<tr><td>No expenses in this 15-day period.</td></tr>{% endfor %}
+  </tbody></table>
+</div>
+{% endblock %}
