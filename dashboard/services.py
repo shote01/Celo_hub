@@ -1,7 +1,8 @@
-from datetime import timedelta
+from datetime import timedelta, timezone as datetime_timezone
 from decimal import Decimal
 from django.conf import settings
-from django.db.models import Count, Sum
+from django.db import connection
+from django.db.models import Count, DateTimeField, F, Func, Sum
 from django.db.models.functions import TruncDay, TruncMonth, TruncWeek, TruncYear
 from django.utils import timezone
 from celo.utils import day_end, day_start
@@ -10,6 +11,21 @@ from inventory.models import Product, StockBatch
 from sales.models import Order, OrderItem
 
 TRUNC = {"daily": TruncDay, "weekly": TruncWeek, "monthly": TruncMonth, "yearly": TruncYear}
+
+
+def _local_bucket(truncation, field):
+    if connection.vendor == "mysql":
+        # Manila has a fixed UTC+08:00 offset; avoid MySQL named-timezone tables.
+        field = Func(
+            F(field), function="DATE_ADD",
+            template="%(function)s(%(expressions)s, INTERVAL 8 HOUR)",
+            output_field=DateTimeField(),
+        )
+        tzinfo = datetime_timezone.utc
+    else:
+        field = F(field)
+        tzinfo = timezone.get_current_timezone()
+    return truncation(field, tzinfo=tzinfo)
 
 
 def bestsellers(start, end, limit=3):
@@ -23,7 +39,7 @@ def daily_series(start, end):
     """One entry per day (zero-filled) for the 'Sales pulse' bar chart."""
     rows = (
         Order.objects.filter(created_at__gte=day_start(start), created_at__lt=day_end(end))
-        .annotate(d=TruncDay("created_at", tzinfo=timezone.get_current_timezone()))
+        .annotate(d=_local_bucket(TruncDay, "created_at"))
         .values("d").annotate(t=Sum("total"))
     )
     by_day = {r["d"].date(): r["t"] for r in rows}
@@ -50,7 +66,7 @@ def sales_report(period, start, end):
     trunc = TRUNC[period]
     rows = (
         Order.objects.filter(created_at__gte=day_start(start), created_at__lt=day_end(end))
-        .annotate(bucket=trunc("created_at", tzinfo=timezone.get_current_timezone()))
+        .annotate(bucket=_local_bucket(trunc, "created_at"))
         .values("bucket").annotate(total=Sum("total"), orders=Count("id"))
         .order_by("-bucket")
     )
