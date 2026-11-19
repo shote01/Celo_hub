@@ -42,6 +42,50 @@ class Employee(models.Model):
         return self.advances.filter(settled_in__isnull=True).aggregate(t=models.Sum("amount"))["t"] or Decimal("0")
 
 
+class Attendance(models.Model):
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="attendance_records")
+    work_date = models.DateField(default=timezone.localdate)
+    check_in = models.DateTimeField(default=timezone.now)
+    break_time_out = models.DateTimeField(null=True, blank=True)
+    break_time_in = models.DateTimeField(null=True, blank=True)
+    check_out = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-work_date", "-check_in"]
+        constraints = [
+            models.UniqueConstraint(fields=["employee", "work_date"], name="unique_employee_attendance_per_day"),
+            models.CheckConstraint(
+                condition=models.Q(check_out__isnull=True) | models.Q(check_out__gte=models.F("check_in")),
+                name="attendance_checkout_after_checkin",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(break_time_out__isnull=True)
+                | models.Q(break_time_out__gte=models.F("check_in")),
+                name="attendance_break_out_after_time_in",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(break_time_in__isnull=True)
+                | (
+                    models.Q(break_time_out__isnull=False)
+                    & models.Q(break_time_in__gte=models.F("break_time_out"))
+                ),
+                name="attendance_break_in_after_break_out",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(check_out__isnull=True)
+                | models.Q(break_time_out__isnull=True)
+                | (
+                    models.Q(break_time_in__isnull=False)
+                    & models.Q(check_out__gte=models.F("break_time_in"))
+                ),
+                name="attendance_checkout_after_break",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.employee} attendance on {self.work_date}"
+
+
 class PayrollRecord(models.Model):
     class PayType(models.TextChoices):
         FIXED = "fixed", "Fixed Amount"
