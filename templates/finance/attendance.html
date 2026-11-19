@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Attendance{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="head">
+    <div><p class="eyebrow">Employee time tracking</p><h2>Attendance</h2></div>
+    {% if employee %}
+      <div class="tools">
+        {% if not current_record %}
+          <form method="post">{% csrf_token %}<input type="hidden" name="action" value="time_in"><button class="btn" type="submit">Time in</button></form>
+        {% elif not current_record.check_out %}
+          <div class="sub">Time-in at {{ current_record.check_in|date:"g:i A" }}</div>
+          {% if current_record.break_time_out and not current_record.break_time_in %}
+            <div class="sub">On break since {{ current_record.break_time_out|date:"g:i A" }}</div>
+            <form method="post">{% csrf_token %}<input type="hidden" name="action" value="break_time_in"><button class="btn" type="submit">End break · time in</button></form>
+          {% else %}
+            {% if not current_record.break_time_out %}
+              <form method="post">{% csrf_token %}<input type="hidden" name="action" value="break_time_out"><button class="btn ghost" type="submit">Start break · time out</button></form>
+            {% else %}
+              <div class="sub">Break: {{ current_record.break_time_out|date:"g:i A" }}–{{ current_record.break_time_in|date:"g:i A" }}</div>
+            {% endif %}
+            <form method="post">{% csrf_token %}<input type="hidden" name="action" value="time_out"><button class="btn" type="submit">Time out</button></form>
+          {% endif %}
+        {% else %}
+          <span class="sub">Today’s shift completed · time-out {{ current_record.check_out|date:"g:i A" }}</span>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+
+  {% if not employee and not is_admin %}
+    <p>Your login is not linked to an active employee. Ask an administrator to link it from the employee edit form.</p>
+  {% elif not employee and is_admin %}
+    <p>To record your own attendance, link your login to an employee record from the employee edit form.</p>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <h2 style="margin-bottom:8px">{% if is_admin %}Recent employee attendance{% else %}Your attendance history{% endif %}</h2>
+  <table>
+    <thead><tr>{% if is_admin %}<th>Employee</th>{% endif %}<th>Date</th><th>Time-in</th><th>Break time-out</th><th>Break time-in</th><th>Time-out</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for record in records %}
+      <tr>
+        {% if is_admin %}<td>{{ record.employee.name }}</td>{% endif %}
+        <td>{{ record.work_date|date:"M d, Y" }}</td>
+        <td>{{ record.check_in|date:"g:i A" }}</td>
+        <td>{% if record.break_time_out %}{{ record.break_time_out|date:"g:i A" }}{% else %}—{% endif %}</td>
+        <td>{% if record.break_time_in %}{{ record.break_time_in|date:"g:i A" }}{% else %}—{% endif %}</td>
+        <td>{% if record.check_out %}{{ record.check_out|date:"g:i A" }}{% else %}—{% endif %}</td>
+        <td>{% if record.check_out %}Complete{% elif record.break_time_out and not record.break_time_in %}On break{% else %}Working{% endif %}</td>
+      </tr>
+    {% empty %}<tr><td colspan="7">No attendance records yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

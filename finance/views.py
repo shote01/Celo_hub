@@ -1,16 +1,91 @@
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from accounts.models import AuditLog
 from accounts.permissions import admin_required
 
 from . import services
-from .forms import AdvanceForm, EmployeeForm, ExpenseForm, PayrollForm
-from .models import Employee, Expense, PayrollRecord
+from .forms import AdvanceForm, CeloUserCreationForm, EmployeeForm, ExpenseForm, PayrollForm
+from .models import Attendance, Employee, Expense, PayrollRecord
 
 
 def _form_page(request, form, title, cancel_url, submit="Save"):
     return render(request, "form_card.html", {"title": title, "form": form, "submit": submit, "cancel_url": cancel_url})
+
+
+@login_required
+def attendance(request):
+    employee = Employee.objects.filter(user=request.user, is_active=True).first()
+    today = timezone.localdate()
+
+    if request.method == "POST":
+        if employee is None:
+            messages.error(request, "Your login is not linked to an active employee. Ask an administrator to link it.")
+            return redirect("finance:attendance")
+
+        if request.POST.get("action") == "time_in":
+            _, created = Attendance.objects.get_or_create(
+                employee=employee,
+                work_date=today,
+                defaults={"check_in": timezone.now()},
+            )
+            if created:
+                messages.success(request, "Time-in recorded.")
+            else:
+                messages.info(request, "A time-in is already recorded for today.")
+        elif request.POST.get("action") == "time_out":
+            record = Attendance.objects.filter(employee=employee, work_date=today, check_out__isnull=True).first()
+            if record is None:
+                messages.error(request, "There is no open time-in to record a time-out for today.")
+            elif record.break_time_out and not record.break_time_in:
+                messages.error(request, "Record your break time-in before ending the workday.")
+            else:
+                record.check_out = timezone.now()
+                record.save(update_fields=["check_out"])
+                messages.success(request, "Time-out recorded.")
+        elif request.POST.get("action") == "break_time_out":
+            record = Attendance.objects.filter(
+                employee=employee, work_date=today, check_out__isnull=True
+            ).first()
+            if record is None:
+                messages.error(request, "Time in before starting a break.")
+            elif record.break_time_out:
+                messages.info(request, "Today's break has already been recorded.")
+            else:
+                record.break_time_out = timezone.now()
+                record.save(update_fields=["break_time_out"])
+                messages.success(request, "Break time-out recorded.")
+        elif request.POST.get("action") == "break_time_in":
+            record = Attendance.objects.filter(
+                employee=employee,
+                work_date=today,
+                break_time_out__isnull=False,
+                break_time_in__isnull=True,
+                check_out__isnull=True,
+            ).first()
+            if record is None:
+                messages.error(request, "There is no active break to end.")
+            else:
+                record.break_time_in = timezone.now()
+                record.save(update_fields=["break_time_in"])
+                messages.success(request, "Break time-in recorded.")
+        else:
+            messages.error(request, "Unknown attendance action.")
+        return redirect("finance:attendance")
+
+    current_record = Attendance.objects.filter(employee=employee, work_date=today).first() if employee else None
+    records = Attendance.objects.select_related("employee")
+    if not request.user.is_celo_admin:
+        records = records.filter(employee=employee) if employee else records.none()
+
+    return render(request, "finance/attendance.html", {
+        "employee": employee,
+        "current_record": current_record,
+        "records": records[:100],
+        "is_admin": request.user.is_celo_admin,
+    })
 
 
 # ---- expense ledger --------------------------------------------------------
@@ -55,6 +130,17 @@ def payroll_list(request):
     return render(request, "finance/payroll_list.html", {
         "rows": rows, "records": PayrollRecord.objects.select_related("employee")[:30],
     })
+
+
+@admin_required
+def user_new(request):
+    form = CeloUserCreationForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        account = form.save()
+        AuditLog.record(request.user, "Created user", f"{account.username} ({account.get_role_display()})")
+        messages.success(request, f"User account '{account.username}' was created.")
+        return redirect("finance:payroll")
+    return render(request, "finance/user_form.html", {"form": form})
 
 
 @admin_required

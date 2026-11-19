@@ -1,5 +1,7 @@
 from django import forms
+from django.contrib.auth.forms import UserCreationForm
 
+from accounts.models import User
 from .models import CashAdvance, Employee, Expense, PayrollRecord
 
 
@@ -34,4 +36,14 @@ class AdvanceForm(forms.ModelForm):
 class EmployeeForm(forms.ModelForm):
     class Meta:
         model = Employee
-        fields = ["name", "position", "salary", "is_active"]
+        fields = ["name", "position", "salary", "is_active", "user"]
+
+
+class CeloUserCreationForm(UserCreationForm):
+    class Meta(UserCreationForm.Meta):
+        model = User
+        fields = ("username", "first_name", "last_name", "email", "role")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.order_fields(("username", "first_name", "last_name", "email", "role", "password1", "password2"))
