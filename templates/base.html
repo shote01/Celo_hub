@@ -1,48 +1,86 @@
-{% load static %}<!doctype html>
-<html lang="en">
+{% load celo_ui %}<!doctype html>
+<html lang="en" class="h-full">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Celo{% endblock %} · Celo Food &amp; Refreshment Hub</title>
-  <link rel="stylesheet" href="{% static 'css/celo.css' %}">
+  {% include "partials/tailwind.html" %}
 </head>
-<body>
-<header class="topbar">
-  <a href="{% url 'dashboard:home' %}" aria-label="Celo home">
-    <svg class="logo" viewBox="0 0 100 100" role="img" aria-label="Celo">
-      <path d="M78 22 A40 40 0 1 0 82 74" fill="none" stroke="#f01c1c" stroke-width="12" stroke-linecap="round"/>
-      <text x="50" y="62" text-anchor="middle" font-size="30" font-weight="700" fill="#fff" font-family="Inter, system-ui, sans-serif">Celo</text>
-    </svg>
-  </a>
-  {% if user.is_authenticated %}
-  <details class="menu">
-    <summary aria-label="Menu"><span></span><span></span><span></span></summary>
-    <nav>
-      <a href="{% url 'dashboard:home' %}">Overview</a>
-      <a href="{% url 'inventory:stock' %}">Inventory</a>
-      <a href="{% url 'sales:list' %}">Sales</a>
-      <a href="{% url 'sales:customers' %}">Customers</a>
-      <a href="{% url 'inventory:waste' %}">Waste</a>
-      <a href="{% url 'finance:attendance' %}">Attendance</a>
-      {% if user.is_celo_admin %}
-        <hr>
-        <a href="{% url 'finance:expenses' %}">Finance</a>
-        <a href="{% url 'finance:payroll' %}">Payroll</a>
-        <a href="{% url 'finance:user_new' %}">Add a user</a>
-        <a href="{% url 'dashboard:reports' %}">Reports</a>
-        <a href="{% url 'inventory:products' %}">Products &amp; menu</a>
-        <a href="{% url 'dashboard:audit' %}">Audit log</a>
-      {% endif %}
-      <hr>
-      <div class="who">{{ user.get_full_name|default:user.username }} · {{ user.get_role_display }}</div>
-      <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Log out</button></form>
+<body class="min-h-full bg-background font-sans text-foreground antialiased">
+<div class="min-h-screen {% if user.is_authenticated %}md:grid md:grid-cols-[16rem_minmax(0,1fr)]{% endif %}">
+
+{% if user.is_authenticated %}
+  {% nav_items as groups %}
+  <div id="scrim" class="fixed inset-0 z-30 hidden bg-black/40 md:hidden print:hidden"></div>
+  <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col bg-brand-dark text-white transition-transform duration-200 md:sticky md:top-0 md:h-screen md:translate-x-0 print:hidden">
+    <a href="{% url 'dashboard:home' %}" class="flex items-center gap-3 px-5 py-5" aria-label="Celo home">
+      <svg viewBox="0 0 100 100" class="h-11 w-11 shrink-0" role="img" aria-label="Celo logo">
+        <path d="M78 22 A40 40 0 1 0 82 74" fill="none" stroke="#f01c1c" stroke-width="12" stroke-linecap="round"/>
+        <text x="50" y="62" text-anchor="middle" font-size="30" font-weight="700" fill="#fff" font-family="Inter, system-ui, sans-serif">Celo</text>
+      </svg>
+      <span class="text-sm leading-tight"><strong class="block text-base">Celo</strong><span class="text-white/70">Food &amp; Refreshment Hub</span></span>
+    </a>
+    <nav class="flex-1 space-y-5 overflow-y-auto px-3 pb-4" aria-label="Main">
+      {% for g in groups %}
+        <div>
+          <p class="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-white/60">{{ g.label }}</p>
+          {% for i in g.items %}
+            <a href="{{ i.href }}" {% if i.active %}aria-current="page"{% endif %}
+               class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors {% if i.active %}bg-white text-brand-dark shadow-sm{% else %}text-white/85 hover:bg-white/10 hover:text-white{% endif %}">
+              {% include "partials/icon.html" with name=i.icon %}{{ i.label }}
+            </a>
+          {% endfor %}
+        </div>
+      {% endfor %}
     </nav>
-  </details>
-  {% endif %}
-</header>
-<main>
-  {% if messages %}<ul class="msgs" role="status">{% for m in messages %}<li class="{{ m.tags }}">{{ m }}</li>{% endfor %}</ul>{% endif %}
-  {% block content %}{% endblock %}
-</main>
+    <div class="border-t border-white/15 p-3">
+      <div class="flex items-center gap-3 px-2 py-2">
+        <span class="grid h-9 w-9 place-items-center rounded-full bg-white/15 text-sm font-semibold">{{ user.username|slice:":1"|upper }}</span>
+        <div class="min-w-0 text-sm leading-tight"><p class="truncate font-medium">{{ user.get_full_name|default:user.username }}</p><p class="text-xs text-white/70">{{ user.get_role_display }}</p></div>
+      </div>
+      <form method="post" action="{% url 'logout' %}">{% csrf_token %}
+        <button type="submit" class="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white">
+          {% include "partials/icon.html" with name="logout" %}Log out</button>
+      </form>
+    </div>
+  </aside>
+{% endif %}
+
+  <div class="min-w-0">
+    {% if user.is_authenticated %}
+    <header class="sticky top-0 z-20 flex h-14 items-center gap-3 border-b bg-background/90 px-4 backdrop-blur md:hidden print:hidden">
+      <button id="open-nav" type="button" class="btn btn-outline btn-icon" aria-label="Open menu" aria-controls="sidebar">{% include "partials/icon.html" with name="menu" %}</button>
+      <span class="font-semibold">Celo</span>
+    </header>
+    {% endif %}
+    <main class="mx-auto w-full max-w-6xl p-4 sm:p-6 lg:p-8">
+      {% if messages %}
+        <div class="mb-5 space-y-2 print:hidden" role="status">
+          {% for m in messages %}<div class="alert {% if m.tags == 'error' %}alert-error{% elif m.tags == 'success' %}alert-success{% else %}alert-info{% endif %}">{{ m }}</div>{% endfor %}
+        </div>
+      {% endif %}
+      {% block header %}
+        <div class="mb-6 flex flex-wrap items-end justify-between gap-3 print:hidden">
+          <div>
+            <h1 class="text-2xl font-semibold tracking-tight">{% block page_title %}{% endblock %}</h1>
+            <p class="mt-1 text-sm text-muted-foreground">{% block page_desc %}{% endblock %}</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">{% block actions %}{% endblock %}</div>
+        </div>
+      {% endblock %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+<script>
+  (function () {
+    const sb = document.getElementById('sidebar'), scrim = document.getElementById('scrim'), open = document.getElementById('open-nav');
+    if (!sb || !open) return;
+    const set = on => { sb.classList.toggle('-translate-x-full', !on); scrim.classList.toggle('hidden', !on); };
+    open.addEventListener('click', () => set(true));
+    scrim.addEventListener('click', () => set(false));
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') set(false); });
+  })();
+</script>
 </body>
 </html>

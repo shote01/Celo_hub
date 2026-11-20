@@ -1,57 +1,120 @@
 {% extends "base.html" %}
 {% block title %}Attendance{% endblock %}
+{% block page_title %}Attendance{% endblock %}
+{% block page_desc %}{% if is_admin %}Employee time tracking, with recent records for the whole team.{% else %}Time in, take your break, and time out.{% endif %}{% endblock %}
 {% block content %}
-<div class="panel">
-  <div class="head">
-    <div><p class="eyebrow">Employee time tracking</p><h2>Attendance</h2></div>
-    {% if employee %}
-      <div class="tools">
-        {% if not current_record %}
-          <form method="post">{% csrf_token %}<input type="hidden" name="action" value="time_in"><button class="btn" type="submit">Time in</button></form>
-        {% elif not current_record.check_out %}
-          <div class="sub">Time-in at {{ current_record.check_in|date:"g:i A" }}</div>
-          {% if current_record.break_time_out and not current_record.break_time_in %}
-            <div class="sub">On break since {{ current_record.break_time_out|date:"g:i A" }}</div>
-            <form method="post">{% csrf_token %}<input type="hidden" name="action" value="break_time_in"><button class="btn" type="submit">End break · time in</button></form>
-          {% else %}
-            {% if not current_record.break_time_out %}
-              <form method="post">{% csrf_token %}<input type="hidden" name="action" value="break_time_out"><button class="btn ghost" type="submit">Start break · time out</button></form>
-            {% else %}
-              <div class="sub">Break: {{ current_record.break_time_out|date:"g:i A" }}–{{ current_record.break_time_in|date:"g:i A" }}</div>
-            {% endif %}
-            <form method="post">{% csrf_token %}<input type="hidden" name="action" value="time_out"><button class="btn" type="submit">Time out</button></form>
-          {% endif %}
-        {% else %}
-          <span class="sub">Today’s shift completed · time-out {{ current_record.check_out|date:"g:i A" }}</span>
-        {% endif %}
-      </div>
-    {% endif %}
+
+{% if employee %}
+<section class="card mb-6">
+  <div class="card-header flex-row flex-wrap items-start justify-between gap-3">
+    <div class="space-y-1.5">
+      <h2 class="card-title">Today</h2>
+      <p class="card-description">{% now "l, F j" %} · {{ employee.name }}</p>
+    </div>
+    {% if not current_record %}<span class="badge badge-muted">Not timed in</span>
+    {% elif current_record.check_out %}<span class="badge badge-green">Shift complete</span>
+    {% elif current_record.break_time_out and not current_record.break_time_in %}<span class="badge badge-amber">On break</span>
+    {% else %}<span class="badge badge-cyan">Working</span>{% endif %}
   </div>
 
-  {% if not employee and not is_admin %}
-    <p>Your login is not linked to an active employee. Ask an administrator to link it from the employee edit form.</p>
-  {% elif not employee and is_admin %}
-    <p>To record your own attendance, link your login to an employee record from the employee edit form.</p>
-  {% endif %}
-</div>
+  <div class="card-content">
+    {# four-step timeline: time-in -> break time-out -> break time-in -> time-out #}
+    <ol class="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Today's attendance steps">
+      <li class="rounded-lg border-2 p-3 {% if current_record %}border-brand bg-accent/60{% endif %}">
+        <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Time in</p>
+        <p class="mt-1 text-lg font-semibold tabular-nums">{% if current_record %}{{ current_record.check_in|date:"g:i A" }}{% else %}—{% endif %}</p>
+      </li>
+      <li class="rounded-lg border-2 p-3 {% if current_record.break_time_out %}border-brand bg-accent/60{% endif %}">
+        <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Break out</p>
+        <p class="mt-1 text-lg font-semibold tabular-nums">{% if current_record.break_time_out %}{{ current_record.break_time_out|date:"g:i A" }}{% else %}—{% endif %}</p>
+      </li>
+      <li class="rounded-lg border-2 p-3 {% if current_record.break_time_in %}border-brand bg-accent/60{% endif %}">
+        <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Break in</p>
+        <p class="mt-1 text-lg font-semibold tabular-nums">{% if current_record.break_time_in %}{{ current_record.break_time_in|date:"g:i A" }}{% else %}—{% endif %}</p>
+      </li>
+      <li class="rounded-lg border-2 p-3 {% if current_record.check_out %}border-brand bg-accent/60{% endif %}">
+        <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Time out</p>
+        <p class="mt-1 text-lg font-semibold tabular-nums">{% if current_record.check_out %}{{ current_record.check_out|date:"g:i A" }}{% else %}—{% endif %}</p>
+      </li>
+    </ol>
 
-<div class="panel">
-  <h2 style="margin-bottom:8px">{% if is_admin %}Recent employee attendance{% else %}Your attendance history{% endif %}</h2>
-  <table>
-    <thead><tr>{% if is_admin %}<th>Employee</th>{% endif %}<th>Date</th><th>Time-in</th><th>Break time-out</th><th>Break time-in</th><th>Time-out</th><th>Status</th></tr></thead>
+    <div class="mt-5 flex flex-wrap items-center gap-3">
+      {% if not current_record %}
+        <form method="post">{% csrf_token %}<input type="hidden" name="action" value="time_in">
+          <button class="btn btn-primary btn-lg" type="submit">{% include "partials/icon.html" with name="login" class="h-5 w-5" %}Time in</button></form>
+      {% elif not current_record.check_out %}
+        {% if current_record.break_time_out and not current_record.break_time_in %}
+          <form method="post">{% csrf_token %}<input type="hidden" name="action" value="break_time_in">
+            <button class="btn btn-primary btn-lg" type="submit">{% include "partials/icon.html" with name="coffee" class="h-5 w-5" %}End break · time in</button></form>
+          <p class="text-sm text-muted-foreground">On break since {{ current_record.break_time_out|date:"g:i A" }}. End your break before timing out.</p>
+        {% else %}
+          {% if not current_record.break_time_out %}
+            <form method="post">{% csrf_token %}<input type="hidden" name="action" value="break_time_out">
+              <button class="btn btn-outline btn-lg" type="submit">{% include "partials/icon.html" with name="coffee" class="h-5 w-5" %}Start break · time out</button></form>
+          {% endif %}
+          <form method="post">{% csrf_token %}<input type="hidden" name="action" value="time_out">
+            <button class="btn btn-primary btn-lg" type="submit">{% include "partials/icon.html" with name="logout" class="h-5 w-5" %}Time out</button></form>
+        {% endif %}
+        <p id="elapsed" class="text-sm text-muted-foreground" data-start="{{ current_record.check_in|date:'c' }}"></p>
+      {% else %}
+        <p class="flex items-center gap-2 text-sm text-muted-foreground">{% include "partials/icon.html" with name="check" %}Today's shift is complete. See you next time.</p>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  const el = document.getElementById('elapsed');
+  if (!el) return;
+  const start = new Date(el.dataset.start);
+  if (isNaN(start)) return;
+  function tick() {
+    const m = Math.max(0, Math.floor((Date.now() - start.getTime()) / 60000));
+    el.textContent = 'Since time-in: ' + Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
+  }
+  tick(); setInterval(tick, 30000);
+})();
+</script>
+
+{% else %}
+<section class="card mb-6">
+  <div class="card-content flex flex-wrap items-start gap-4 pt-5">
+    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-warning/10 text-warning">{% include "partials/icon.html" with name="alert" class="h-5 w-5" %}</span>
+    <div class="min-w-0 flex-1">
+      <h2 class="card-title">Your login isn't linked to an employee</h2>
+      <p class="mt-1.5 text-sm text-muted-foreground">
+        {% if is_admin %}To record your own attendance, link your login to an employee record from the employee edit form.
+        {% else %}Ask an administrator to link your login to an active employee from the employee edit form.{% endif %}
+      </p>
+    </div>
+    {% if is_admin %}<a class="btn btn-outline" href="{% url 'finance:payroll' %}">Open employees</a>{% endif %}
+  </div>
+</section>
+{% endif %}
+
+<section class="card">
+  <div class="card-header"><h2 class="card-title">{% if is_admin %}Recent employee attendance{% else %}Your attendance history{% endif %}</h2></div>
+  <div class="card-content px-0 pb-2"><div class="table-wrap"><table>
+    <thead><tr>
+      {% if is_admin %}<th>Employee</th>{% endif %}
+      <th>Date</th><th>Time in</th><th>Break out</th><th>Break in</th><th>Time out</th><th>Status</th>
+    </tr></thead>
     <tbody>
     {% for record in records %}
       <tr>
-        {% if is_admin %}<td>{{ record.employee.name }}</td>{% endif %}
-        <td>{{ record.work_date|date:"M d, Y" }}</td>
-        <td>{{ record.check_in|date:"g:i A" }}</td>
-        <td>{% if record.break_time_out %}{{ record.break_time_out|date:"g:i A" }}{% else %}—{% endif %}</td>
-        <td>{% if record.break_time_in %}{{ record.break_time_in|date:"g:i A" }}{% else %}—{% endif %}</td>
-        <td>{% if record.check_out %}{{ record.check_out|date:"g:i A" }}{% else %}—{% endif %}</td>
-        <td>{% if record.check_out %}Complete{% elif record.break_time_out and not record.break_time_in %}On break{% else %}Working{% endif %}</td>
+        {% if is_admin %}<td class="font-medium">{{ record.employee.name }}</td>{% endif %}
+        <td class="whitespace-nowrap">{{ record.work_date|date:"M d, Y" }}</td>
+        <td class="tabular-nums">{{ record.check_in|date:"g:i A" }}</td>
+        <td class="tabular-nums">{% if record.break_time_out %}{{ record.break_time_out|date:"g:i A" }}{% else %}—{% endif %}</td>
+        <td class="tabular-nums">{% if record.break_time_in %}{{ record.break_time_in|date:"g:i A" }}{% else %}—{% endif %}</td>
+        <td class="tabular-nums">{% if record.check_out %}{{ record.check_out|date:"g:i A" }}{% else %}—{% endif %}</td>
+        <td>{% if record.check_out %}<span class="badge badge-green">Complete</span>{% elif record.break_time_out and not record.break_time_in %}<span class="badge badge-amber">On break</span>{% else %}<span class="badge badge-cyan">Working</span>{% endif %}</td>
       </tr>
-    {% empty %}<tr><td colspan="7">No attendance records yet.</td></tr>{% endfor %}
+    {% empty %}
+      <tr><td colspan="{% if is_admin %}7{% else %}6{% endif %}" class="py-10 text-center text-muted-foreground">No attendance records yet.</td></tr>
+    {% endfor %}
     </tbody>
-  </table>
-</div>
+  </table></div></div>
+</section>
 {% endblock %}

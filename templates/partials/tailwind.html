@@ -1,0 +1,96 @@
+{# Tailwind (Play CDN) + shadcn/ui design tokens and component classes. #}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: {
+      fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+      colors: {
+        border: 'hsl(var(--border) / <alpha-value>)', input: 'hsl(var(--input) / <alpha-value>)',
+        ring: 'hsl(var(--ring) / <alpha-value>)', background: 'hsl(var(--background) / <alpha-value>)',
+        foreground: 'hsl(var(--foreground) / <alpha-value>)',
+        primary: { DEFAULT: 'hsl(var(--primary) / <alpha-value>)', foreground: 'hsl(var(--primary-foreground) / <alpha-value>)' },
+        secondary: { DEFAULT: 'hsl(var(--secondary) / <alpha-value>)', foreground: 'hsl(var(--secondary-foreground) / <alpha-value>)' },
+        destructive: { DEFAULT: 'hsl(var(--destructive) / <alpha-value>)' },
+        muted: { DEFAULT: 'hsl(var(--muted) / <alpha-value>)', foreground: 'hsl(var(--muted-foreground) / <alpha-value>)' },
+        accent: { DEFAULT: 'hsl(var(--accent) / <alpha-value>)', foreground: 'hsl(var(--accent-foreground) / <alpha-value>)' },
+        card: { DEFAULT: 'hsl(var(--card) / <alpha-value>)', foreground: 'hsl(var(--card-foreground) / <alpha-value>)' },
+        brand: { DEFAULT: 'hsl(var(--brand) / <alpha-value>)', dark: 'hsl(var(--brand-dark) / <alpha-value>)' },
+        success: 'hsl(var(--success) / <alpha-value>)',
+        warning: 'hsl(var(--warning) / <alpha-value>)',
+      },
+      borderRadius: { lg: 'var(--radius)', md: 'calc(var(--radius) - 2px)', sm: 'calc(var(--radius) - 4px)' },
+    } },
+  };
+</script>
+<style type="text/tailwindcss">
+  @layer base {
+    :root {
+      --background: 200 25% 97%;  --foreground: 200 45% 10%;
+      --card: 0 0% 100%;          --card-foreground: 200 45% 10%;
+      --primary: 0 87% 52%;       --primary-foreground: 0 0% 100%;
+      --secondary: 200 25% 93%;   --secondary-foreground: 200 45% 14%;
+      --muted: 200 25% 94%;       --muted-foreground: 200 14% 38%;
+      --accent: 193 80% 93%;      --accent-foreground: 193 85% 22%;
+      --destructive: 0 80% 46%;
+      --border: 200 22% 88%;      --input: 200 20% 82%;  --ring: 193 100% 38%;
+      --brand: 193 100% 44%;      --brand-dark: 193 85% 44%;
+      --success: 142 70% 30%;     --warning: 32 95% 36%;
+      --radius: 0.6rem;
+    }
+    * { @apply border-border; }
+  }
+  @layer components {
+    .btn { @apply inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50; }
+    .btn-primary { @apply bg-primary text-primary-foreground shadow hover:bg-primary/90; }
+    .btn-secondary { @apply bg-secondary text-secondary-foreground hover:bg-secondary/80; }
+    .btn-outline { @apply border border-input bg-card shadow-sm hover:bg-accent hover:text-accent-foreground; }
+    .btn-ghost { @apply hover:bg-accent hover:text-accent-foreground; }
+    .btn-destructive { @apply bg-destructive text-white shadow-sm hover:bg-destructive/90; }
+    .btn-sm { @apply h-8 rounded-md px-3 text-xs; }
+    .btn-lg { @apply h-11 px-6 text-base; }
+    .btn-icon { @apply h-9 w-9 p-0; }
+    .card { @apply rounded-xl border bg-card text-card-foreground shadow-sm; }
+    .card-header { @apply flex flex-col gap-1.5 p-5 pb-3; }
+    .card-title { @apply font-semibold leading-none tracking-tight; }
+    .card-description { @apply text-sm text-muted-foreground; }
+    .card-content { @apply p-5 pt-0; }
+    .card-footer { @apply flex items-center justify-end gap-2 p-5 pt-0; }
+    .field { @apply mb-4 grid gap-1.5; }
+    .field > label, .label { @apply text-sm font-medium leading-none; }
+    .field > input:not([type=checkbox]):not([type=radio]), .field > select, .field > textarea, .input {
+      @apply flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50;
+    }
+    .field > input[type=checkbox] { @apply h-4 w-4 rounded border-input accent-brand-dark; }
+    .field > textarea { @apply h-auto min-h-[80px]; }
+    .help { @apply text-xs text-muted-foreground; }
+    .help ul { @apply mt-1 list-disc space-y-0.5 pl-4; }
+    .errorlist { @apply m-0 list-none p-0 text-xs font-medium text-destructive; }
+    .badge { @apply inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold transition-colors; }
+    .badge-muted { @apply border-transparent bg-secondary text-secondary-foreground; }
+    .badge-green { @apply border-success/25 bg-success/10 text-success; }
+    .badge-red { @apply border-destructive/25 bg-destructive/10 text-destructive; }
+    .badge-amber { @apply border-warning/30 bg-warning/10 text-warning; }
+    .badge-cyan { @apply border-brand-dark/20 bg-accent text-accent-foreground; }
+    .table-wrap { @apply w-full overflow-x-auto; }
+    .table-wrap table { @apply w-full caption-bottom text-sm; }
+    .table-wrap th { @apply h-10 px-4 text-left align-middle text-xs font-medium uppercase tracking-wide text-muted-foreground; }
+    .table-wrap td { @apply border-t px-4 py-3 align-middle; }
+    .table-wrap tbody tr { @apply transition-colors hover:bg-muted/50; }
+    .table-wrap .num { @apply text-right tabular-nums; }
+    .tabs { @apply inline-flex items-center rounded-lg bg-muted p-1 text-muted-foreground; }
+    .tab { @apply inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-all; }
+    .tab-active { @apply bg-card text-foreground shadow; }
+    .alert { @apply flex items-start gap-3 rounded-lg border bg-card p-3 text-sm font-medium shadow-sm; }
+    .alert-success { @apply border-success/30 bg-success/10 text-success; }
+    .alert-error { @apply border-destructive/30 bg-destructive/10 text-destructive; }
+    .alert-info { @apply border-brand-dark/25 bg-accent text-accent-foreground; }
+    .item { @apply grid gap-1 rounded-lg border-2 bg-card p-3 transition-colors; }
+    .item.selected { @apply border-brand bg-accent/60; }
+    .item.out { @apply opacity-50; }
+    .step { @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-foreground text-xl font-semibold text-background transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40; }
+    .step-minus { @apply bg-secondary text-secondary-foreground; }
+  }
+</style>

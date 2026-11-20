@@ -1,34 +1,36 @@
 {% extends "base.html" %}{% load humanize %}
 {% block title %}Sales{% endblock %}
+{% block page_title %}Sales{% endblock %}
+{% block page_desc %}Counter and online orders{% if user.is_celo_admin %} for the whole shop{% else %} you recorded{% endif %}.{% endblock %}
+{% block actions %}
+  <a class="btn btn-outline" href="{% url 'sales:customers' %}">{% include "partials/icon.html" with name="users" %}Customer lookup</a>
+  <a class="btn btn-primary" href="{% url 'sales:new' %}">{% include "partials/icon.html" with name="plus" %}New sale</a>
+{% endblock %}
 {% block content %}
-<div class="panel">
-  <p class="eyebrow">Celo Food &amp; Refreshment Hub{% if user.is_celo_admin %} · Admin{% endif %}</p>
-  <div class="head">
-    <h1>Sales</h1>
-    <div class="tools">
-      <a class="pill {% if range == 'today' %}on{% endif %}" href="?range=today">Today</a>
-      <a class="pill {% if range == '7' %}on{% endif %}" href="?range=7">7 days</a>
-      <a class="pill {% if range == '15' %}on{% endif %}" href="?range=15">15 days</a>
-    </div>
+<div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+  <div class="tabs">
+    <a class="tab {% if range == 'today' %}tab-active{% endif %}" href="?range=today">Today</a>
+    <a class="tab {% if range == '7' %}tab-active{% endif %}" href="?range=7">7 days</a>
+    <a class="tab {% if range == '15' %}tab-active{% endif %}" href="?range=15">15 days</a>
   </div>
-  <div class="tools" style="margin-bottom:14px">
-    <strong style="font-size:18px">₱{{ gross|floatformat:"-2"|intcomma }}</strong><span class="sub">gross sales</span>
-    <a class="pill" href="{% url 'sales:customers' %}">Customer lookup</a>
-    <a class="btn" href="{% url 'sales:new' %}">+ New sale</a>
-  </div>
-  <p class="eyebrow">Counter + online</p>
-  <h2>Sales transactions</h2>
-  <table>
+</div>
+<div class="mb-6 grid gap-4 sm:grid-cols-2">
+  <div class="card p-5"><p class="text-sm font-medium text-muted-foreground">Gross sales</p><p class="mt-1 text-3xl font-semibold tracking-tight tabular-nums">₱{{ gross|floatformat:"-2"|intcomma }}</p></div>
+  <div class="card p-5"><p class="text-sm font-medium text-muted-foreground">Transactions</p><p class="mt-1 text-3xl font-semibold tracking-tight tabular-nums">{{ orders|length }}</p></div>
+</div>
+<section class="card">
+  <div class="card-header"><h2 class="card-title">Sales transactions</h2><p class="card-description">Tap an order to open its receipt.</p></div>
+  <div class="card-content px-0 pb-2"><div class="table-wrap"><table>
     <tbody>
     {% for o in orders %}
       <tr>
-        <td><a href="{% url 'sales:receipt' o.pk %}" style="text-decoration:none"><strong>#{{ o.number }} · {{ o.label }}</strong></a>
-            <div class="sub">{{ o.created_at|date:"g:i A" }} · {{ o.summary }}</div></td>
-        <td><span class="pill">{{ o.get_payment_method_display }}</span></td>
-        <td class="num">₱{{ o.total|floatformat:"-2"|intcomma }}</td>
+        <td><a href="{% url 'sales:receipt' o.pk %}" class="font-medium hover:underline">#{{ o.number }} · {{ o.label }}</a>
+            <div class="text-xs text-muted-foreground">{{ o.created_at|date:"M d · g:i A" }} · {{ o.summary }}</div></td>
+        <td class="hidden sm:table-cell"><span class="badge badge-muted">{{ o.get_order_type_display }}</span> <span class="badge badge-cyan">{{ o.get_payment_method_display }}</span></td>
+        <td class="num font-semibold">₱{{ o.total|floatformat:"-2"|intcomma }}</td>
       </tr>
-    {% empty %}<tr><td>No sales in this range yet.</td></tr>{% endfor %}
+    {% empty %}<tr><td colspan="3" class="py-10 text-center text-muted-foreground">No sales in this range yet.</td></tr>{% endfor %}
     </tbody>
-  </table>
-</div>
+  </table></div></div>
+</section>
 {% endblock %}

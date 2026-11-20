@@ -1,11 +1,23 @@
 {% extends "base.html" %}
 {% block title %}Log in{% endblock %}
+{% block header %}{% endblock %}
 {% block content %}
-<div class="card-wrap"><form method="post" class="card">{% csrf_token %}
-  <h2>Log in to Celo</h2>
-  {% if form.non_field_errors %}<ul class="errorlist">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-  <div class="field"><label for="id_username">Username</label>{{ form.username }}</div>
-  <div class="field"><label for="id_password">Password</label>{{ form.password }}</div>
-  <div class="actions"><button class="btn" type="submit">Log in</button></div>
-</form></div>
+<div class="mx-auto mt-10 w-full max-w-sm sm:mt-20">
+  <div class="mb-6 flex flex-col items-center gap-2 text-center">
+    <svg viewBox="0 0 100 100" class="h-16 w-16 rounded-2xl bg-brand-dark p-1.5" role="img" aria-label="Celo logo">
+      <path d="M78 22 A40 40 0 1 0 82 74" fill="none" stroke="#f01c1c" stroke-width="12" stroke-linecap="round"/>
+      <text x="50" y="62" text-anchor="middle" font-size="30" font-weight="700" fill="#fff" font-family="Inter, system-ui, sans-serif">Celo</text>
+    </svg>
+    <h1 class="text-xl font-semibold tracking-tight">Celo Food &amp; Refreshment Hub</h1>
+  </div>
+  <form method="post" class="card">{% csrf_token %}
+    <div class="card-header"><h2 class="card-title">Welcome back</h2><p class="card-description">Log in to manage sales and inventory.</p></div>
+    <div class="card-content">
+      {% if form.non_field_errors %}<div class="alert alert-error mb-4">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+      <div class="field"><label for="id_username">Username</label>{{ form.username }}</div>
+      <div class="field mb-0"><label for="id_password">Password</label>{{ form.password }}</div>
+    </div>
+    <div class="card-footer pt-4"><button class="btn btn-primary w-full" type="submit">Log in</button></div>
+  </form>
+</div>
 {% endblock %}

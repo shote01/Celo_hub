@@ -1,34 +1,58 @@
 {% extends "base.html" %}{% load humanize %}
 {% block title %}Overview{% endblock %}
+{% block page_title %}Overview{% endblock %}
+{% block page_desc %}{{ b.start|date:"M d" }} – {{ b.end|date:"M d, Y" }} · rolling 15-day performance{% endblock %}
+{% block actions %}<a class="btn btn-primary" href="{% url 'sales:new' %}">{% include "partials/icon.html" with name="plus" %}New sale</a>{% endblock %}
 {% block content %}
-<div class="kpis">
-  <div class="kpi"><div class="label">Gross sales</div><div class="value">₱{{ b.gross|floatformat:"-2"|intcomma }}</div><div class="hint">Live ledger</div></div>
-  <div class="kpi"><div class="label">Net income</div><div class="value {% if b.net < 0 %}neg{% endif %}">₱{{ b.net|floatformat:"-2"|intcomma }}</div><div class="hint">After fixed costs</div></div>
-  <div class="kpi"><div class="label">FIFO / low stock</div><div class="value">{{ alerts.fifo|add:alerts.low }}</div><div class="hint">Needs review</div></div>
-  <div class="kpi"><div class="label">Waste cost</div><div class="value">₱{{ b.waste|floatformat:"-2"|intcomma }}</div><div class="hint">Included in accounting</div></div>
+<div class="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  <div class="card p-5"><div class="flex items-center justify-between text-muted-foreground"><p class="text-sm font-medium">Gross sales</p>{% include "partials/icon.html" with name="receipt" %}</div>
+    <p class="mt-2 text-3xl font-semibold tracking-tight tabular-nums">₱{{ b.gross|floatformat:"-2"|intcomma }}</p><p class="mt-1 text-xs text-muted-foreground">Live ledger</p></div>
+  <div class="card p-5"><div class="flex items-center justify-between text-muted-foreground"><p class="text-sm font-medium">Net income</p>{% include "partials/icon.html" with name="wallet" %}</div>
+    <p class="mt-2 text-3xl font-semibold tracking-tight tabular-nums {% if b.net < 0 %}text-destructive{% endif %}">₱{{ b.net|floatformat:"-2"|intcomma }}</p><p class="mt-1 text-xs text-muted-foreground">After waste, expenses &amp; payroll</p></div>
+  <div class="card p-5"><div class="flex items-center justify-between text-muted-foreground"><p class="text-sm font-medium">FIFO / low stock</p>{% include "partials/icon.html" with name="package" %}</div>
+    <p class="mt-2 text-3xl font-semibold tracking-tight tabular-nums">{{ alerts.fifo|add:alerts.low }}</p><p class="mt-1 text-xs text-muted-foreground">Items needing review</p></div>
+  <div class="card p-5"><div class="flex items-center justify-between text-muted-foreground"><p class="text-sm font-medium">Waste cost</p>{% include "partials/icon.html" with name="trash" %}</div>
+    <p class="mt-2 text-3xl font-semibold tracking-tight tabular-nums">₱{{ b.waste|floatformat:"-2"|intcomma }}</p><p class="mt-1 text-xs text-muted-foreground">Deducted from net income</p></div>
 </div>
 
-<div class="grid2">
-  <div class="panel">
-    <p class="eyebrow">15-day performance</p>
-    <div class="head"><h2>Sales pulse</h2><a class="btn small ghost" href="{% url 'dashboard:reports' %}">Reports →</a></div>
-    <div class="bars" role="img" aria-label="Gross sales per day for the last 15 days">
-      {% for d in series %}<div class="bar {% if d.low %}low{% endif %}" style="height:{{ d.height }}%" title="{{ d.date|date:'M d' }}: ₱{{ d.value|floatformat:'-2'|intcomma }}"></div>{% endfor %}
+<div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+  <section class="card">
+    <div class="card-header flex-row items-start justify-between">
+      <div class="space-y-1.5"><h2 class="card-title">Sales pulse</h2><p class="card-description">Gross sales per day. Red bars are well below average.</p></div>
+      <a class="btn btn-outline btn-sm" href="{% url 'dashboard:reports' %}">Reports</a>
     </div>
-    <div class="axis"><span>{{ b.start|date:"M d" }}</span><span>{{ b.end|date:"M d" }}</span></div>
-  </div>
-  <div>
-    <div class="panel">
-      <p class="eyebrow">Operating alerts</p><h2>Needs attention</h2>
-      <div class="alert-row"><div><strong>FIFO priority</strong><div class="sub">{{ alerts.fifo }} batch{{ alerts.fifo|pluralize:"es" }} near or past expiry.</div></div><a href="{% url 'inventory:stock' %}">View</a></div>
-      <div class="alert-row"><div><strong>Low stock</strong><div class="sub">{{ alerts.low }} item{{ alerts.low|pluralize }} at or under reorder level.</div></div><a href="{% url 'inventory:stock' %}">View</a></div>
-      <div class="alert-row"><div><strong>Payroll</strong><div class="sub">₱{{ alerts.advances|floatformat:"-2"|intcomma }} in cash advances outstanding.</div></div><a href="{% url 'finance:payroll' %}">View</a></div>
+    <div class="card-content">
+      <div class="flex h-56 items-end gap-1.5 border-b pt-2 sm:gap-2" role="img" aria-label="Gross sales per day for the last 15 days">
+        {% for d in series %}
+          <div class="group relative flex h-full flex-1 items-end">
+            <div class="w-full rounded-t-md {% if d.low %}bg-destructive/80{% else %}bg-brand/70 group-hover:bg-brand{% endif %} transition-colors" style="height:{{ d.height }}%;min-height:3px"></div>
+            <div class="pointer-events-none absolute -top-9 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-2 py-1 text-xs text-background group-hover:block">{{ d.date|date:"M d" }} · ₱{{ d.value|floatformat:"-2"|intcomma }}</div>
+          </div>
+        {% endfor %}
+      </div>
+      <div class="mt-2 flex justify-between text-xs text-muted-foreground"><span>{{ b.start|date:"M d" }}</span><span>{{ b.end|date:"M d" }}</span></div>
     </div>
-    <div class="panel">
-      <p class="eyebrow">Bestseller analytics</p><h2>What moves</h2>
-      {% for t in top %}<div class="list-row"><strong>{{ t.product__name }}</strong><span class="sub">{{ t.sold|floatformat:"-2" }} sold</span></div>
-      {% empty %}<p class="sub">No sales in this period yet.</p>{% endfor %}
-    </div>
+  </section>
+
+  <div class="space-y-6">
+    <section class="card">
+      <div class="card-header"><h2 class="card-title">Needs attention</h2></div>
+      <div class="card-content divide-y text-sm">
+        <a href="{% url 'inventory:stock' %}" class="flex items-center justify-between gap-3 py-3 hover:underline"><div><p class="font-medium">FIFO priority</p><p class="text-xs text-muted-foreground">{{ alerts.fifo }} batch{{ alerts.fifo|pluralize:"es" }} near or past expiry</p></div>
+          <span class="badge {% if alerts.fifo %}badge-red{% else %}badge-green{% endif %}">{{ alerts.fifo }}</span></a>
+        <a href="{% url 'inventory:stock' %}" class="flex items-center justify-between gap-3 py-3 hover:underline"><div><p class="font-medium">Low stock</p><p class="text-xs text-muted-foreground">{{ alerts.low }} item{{ alerts.low|pluralize }} at or under reorder level</p></div>
+          <span class="badge {% if alerts.low %}badge-amber{% else %}badge-green{% endif %}">{{ alerts.low }}</span></a>
+        <a href="{% url 'finance:payroll' %}" class="flex items-center justify-between gap-3 py-3 hover:underline"><div><p class="font-medium">Payroll</p><p class="text-xs text-muted-foreground">Outstanding cash advances</p></div>
+          <span class="badge {% if alerts.advances %}badge-amber{% else %}badge-green{% endif %}">₱{{ alerts.advances|floatformat:"-2"|intcomma }}</span></a>
+      </div>
+    </section>
+    <section class="card">
+      <div class="card-header"><h2 class="card-title">What moves</h2><p class="card-description">Bestsellers this period</p></div>
+      <div class="card-content divide-y text-sm">
+        {% for t in top %}<div class="flex items-center justify-between py-2.5"><span class="flex items-center gap-3"><span class="grid h-6 w-6 place-items-center rounded-full bg-accent text-xs font-semibold text-accent-foreground">{{ forloop.counter }}</span><span class="font-medium">{{ t.product__name }}</span></span><span class="text-muted-foreground tabular-nums">{{ t.sold|floatformat:"-2" }} sold</span></div>
+        {% empty %}<p class="py-2 text-muted-foreground">No sales in this period yet.</p>{% endfor %}
+      </div>
+    </section>
   </div>
 </div>
 {% endblock %}

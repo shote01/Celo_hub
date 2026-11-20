@@ -1,9 +1,16 @@
 {% extends "base.html" %}
 {% block title %}Audit log{% endblock %}
+{% block page_title %}Audit log{% endblock %}
+{% block page_desc %}Who did what, most recent first.{% endblock %}
 {% block content %}
-<div class="panel"><p class="eyebrow">Who did what</p><h2 style="margin-bottom:8px">Activity log</h2>
-  <table><thead><tr><th>When</th><th>User</th><th>Action</th><th>Detail</th></tr></thead><tbody>
-  {% for e in entries %}<tr><td>{{ e.created_at|date:"M d, g:i A" }}</td><td>{{ e.user|default:"—" }}</td><td><strong>{{ e.action }}</strong></td><td class="sub">{{ e.detail }}</td></tr>
-  {% empty %}<tr><td colspan="4">No activity yet.</td></tr>{% endfor %}
-  </tbody></table></div>
+<section class="card"><div class="table-wrap py-2"><table>
+  <thead><tr><th>When</th><th>User</th><th>Action</th><th>Detail</th></tr></thead>
+  <tbody>
+  {% for e in entries %}<tr>
+    <td class="whitespace-nowrap text-muted-foreground">{{ e.created_at|date:"M d, g:i A" }}</td>
+    <td>{{ e.user|default:"—" }}</td><td><span class="badge badge-cyan">{{ e.action }}</span></td>
+    <td class="text-muted-foreground">{{ e.detail }}</td></tr>
+  {% empty %}<tr><td colspan="4" class="py-10 text-center text-muted-foreground">No activity yet.</td></tr>{% endfor %}
+  </tbody>
+</table></div></section>
 {% endblock %}

@@ -1,38 +1,50 @@
 {% extends "base.html" %}{% load humanize %}
 {% block title %}Payroll{% endblock %}
+{% block page_title %}Employee payroll{% endblock %}
+{% block page_desc %}Pay records and cash advances. Advances are deducted from net pay.{% endblock %}
+{% block actions %}
+  <a class="btn btn-outline" href="{% url 'finance:attendance' %}">{% include "partials/icon.html" with name="clock" %}Attendance</a>
+  <a class="btn btn-outline" href="{% url 'finance:employee_new' %}">Payroll employee</a>
+  <a class="btn btn-outline" href="{% url 'finance:advance_new' %}">Cash advance</a>
+  <a class="btn btn-primary" href="{% url 'finance:payroll_new' %}">{% include "partials/icon.html" with name="plus" %}Add record</a>
+{% endblock %}
 {% block content %}
-<div class="panel">
-  <div class="head"><div><p class="eyebrow">Payroll + cash advances</p><h2>Employee payroll</h2></div>
-    <div class="tools">
-      <a class="btn ghost small" href="{% url 'finance:employee_new' %}">+ Payroll employee</a>
-      <a class="btn ghost small" href="{% url 'finance:attendance' %}">Attendance</a>
-      <a class="btn ghost small" href="{% url 'finance:advance_new' %}">+ Cash advance</a>
-      <a class="btn" href="{% url 'finance:payroll_new' %}">+ Add record</a>
-    </div></div>
-  <table><tbody>
-  {% for r in rows %}
-    <tr><td><strong>{{ r.emp.name }}</strong>
-        <div class="sub">{{ r.emp.position }} · ₱{{ r.emp.salary|floatformat:"-2"|intcomma }} salary · ₱{{ r.advance|floatformat:"-2"|intcomma }} advance</div></td>
-        <td class="num">{% if r.last %}₱{{ r.last.net_pay|floatformat:"-2"|intcomma }}<div class="sub">net · {{ r.last.created_at|date:"M d" }}</div>{% else %}<span class="sub">No record yet</span>{% endif %}</td>
-        <td class="num"><a class="btn small ghost" href="{% url 'finance:employee_edit' r.emp.pk %}">Edit</a></td></tr>
-  {% empty %}<tr><td>No employees yet.</td></tr>{% endfor %}
-  </tbody></table>
-</div>
+<div class="space-y-6">
+<section class="card">
+  <div class="card-header"><h2 class="card-title">Employees</h2></div>
+  <div class="card-content px-0 pb-2"><div class="table-wrap"><table>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td><div class="font-medium">{{ r.emp.name }}</div>
+            <div class="text-xs text-muted-foreground">{{ r.emp.position }} · ₱{{ r.emp.salary|floatformat:"-2"|intcomma }} salary</div>
+            <div class="mt-1">{% if r.emp.user %}<span class="badge badge-cyan">Login: {{ r.emp.user.username }}</span>{% else %}<span class="badge badge-muted">No login linked</span>{% endif %}</div></td>
+        <td class="hidden sm:table-cell">{% if r.advance %}<span class="badge badge-amber">₱{{ r.advance|floatformat:"-2"|intcomma }} advance</span>{% else %}<span class="text-xs text-muted-foreground">No advance</span>{% endif %}</td>
+        <td class="num">{% if r.last %}<div class="font-semibold">₱{{ r.last.net_pay|floatformat:"-2"|intcomma }}</div><div class="text-xs text-muted-foreground">net · {{ r.last.created_at|date:"M d" }}</div>{% else %}<span class="text-xs text-muted-foreground">No record yet</span>{% endif %}</td>
+        <td class="num"><a class="btn btn-outline btn-sm" href="{% url 'finance:employee_edit' r.emp.pk %}">Edit</a></td>
+      </tr>
+    {% empty %}<tr><td class="py-10 text-center text-muted-foreground">No employees yet.</td></tr>{% endfor %}
+    </tbody>
+  </table></div></div>
+</section>
 
-<div class="panel">
-  <h2 style="margin-bottom:8px">Payroll history</h2>
-  <table>
-    <thead><tr><th>Employee</th><th>Period</th><th class="num">Gross pay</th><th class="num">Advances</th><th class="num">Net pay</th><th></th></tr></thead>
+<section class="card">
+  <div class="card-header"><h2 class="card-title">Payroll history</h2></div>
+  <div class="card-content px-0 pb-2"><div class="table-wrap"><table>
+    <thead><tr><th>Employee</th><th>Period</th><th class="num">Gross</th><th class="num">Advances</th><th class="num">Net pay</th><th></th></tr></thead>
     <tbody>
     {% for rec in records %}
-      <tr><td>{{ rec.employee.name }}<div class="sub">{{ rec.get_pay_type_display }}{% if rec.pay_type == 'percentage' %} · {{ rec.value|floatformat:"-2" }}%{% endif %}</div></td>
-          <td>{{ rec.period_start|date:"M d" }} – {{ rec.period_end|date:"M d" }}</td>
-          <td class="num">₱{{ rec.amount|floatformat:"-2"|intcomma }}</td>
-          <td class="num">₱{{ rec.advance_deducted|floatformat:"-2"|intcomma }}</td>
-          <td class="num">₱{{ rec.net_pay|floatformat:"-2"|intcomma }}</td>
-          <td class="num"><a class="btn small" href="{% url 'finance:payroll_delete' rec.pk %}" aria-label="Delete record">×</a></td></tr>
-    {% empty %}<tr><td colspan="6">No payroll records yet.</td></tr>{% endfor %}
+      <tr>
+        <td><div class="font-medium">{{ rec.employee.name }}</div><div class="text-xs text-muted-foreground">{{ rec.get_pay_type_display }}{% if rec.pay_type == 'percentage' %} · {{ rec.value|floatformat:"-2" }}%{% endif %}</div></td>
+        <td class="whitespace-nowrap text-muted-foreground">{{ rec.period_start|date:"M d" }} – {{ rec.period_end|date:"M d" }}</td>
+        <td class="num">₱{{ rec.amount|floatformat:"-2"|intcomma }}</td>
+        <td class="num">₱{{ rec.advance_deducted|floatformat:"-2"|intcomma }}</td>
+        <td class="num font-semibold">₱{{ rec.net_pay|floatformat:"-2"|intcomma }}</td>
+        <td class="num"><a class="btn btn-ghost btn-icon btn-sm text-destructive hover:text-destructive" href="{% url 'finance:payroll_delete' rec.pk %}" aria-label="Delete record">{% include "partials/icon.html" with name="x" %}</a></td>
+      </tr>
+    {% empty %}<tr><td colspan="6" class="py-10 text-center text-muted-foreground">No payroll records yet.</td></tr>{% endfor %}
     </tbody>
-  </table>
+  </table></div></div>
+</section>
 </div>
 {% endblock %}

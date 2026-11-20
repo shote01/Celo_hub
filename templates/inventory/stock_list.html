@@ -1,63 +1,66 @@
 {% extends "base.html" %}
 {% block title %}Inventory{% endblock %}
+{% block page_title %}Stock &amp; expiration{% endblock %}
+{% block page_desc %}Real-time FIFO ledger. Oldest or soonest-expiring stock is used first.{% endblock %}
+{% block actions %}
+  <a class="btn btn-outline" href="{% url 'inventory:waste_new' %}">Log waste</a>
+  <a class="btn btn-primary" href="{% url 'inventory:receive' %}">{% include "partials/icon.html" with name="plus" %}Receive stock</a>
+{% endblock %}
 {% block content %}
-<div class="panel">
-  <form method="get" class="head">
-    <input type="search" name="q" value="{{ q }}" placeholder="Search product or batch" aria-label="Search product or batch"
-           style="flex:1;min-width:200px;padding:9px 12px;border:1px solid var(--line);border-radius:6px;font:inherit">
-    {% if kind %}<input type="hidden" name="kind" value="{{ kind }}">{% endif %}
-    <div class="tools">
-      <a class="pill {% if not kind %}on{% endif %}" href="?{% if q %}q={{ q|urlencode }}{% endif %}">All</a>
-      <a class="pill {% if kind == 'ingredient' %}on{% endif %}" href="?kind=ingredient{% if q %}&q={{ q|urlencode }}{% endif %}">Ingredients</a>
-      <a class="pill {% if kind == 'menu' %}on{% endif %}" href="?kind=menu{% if q %}&q={{ q|urlencode }}{% endif %}">Menu</a>
-      <a class="btn" href="{% url 'inventory:receive' %}">+ Receive stock</a>
-    </div>
-  </form>
-  <p class="eyebrow">Real-time FIFO ledger</p>
-  <h1 style="font-size:24px">Stock &amp; expiration</h1>
-</div>
+<form method="get" class="mb-5 flex flex-wrap items-center gap-3">
+  <div class="relative min-w-[220px] flex-1">
+    <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{% include "partials/icon.html" with name="search" %}</span>
+    <input type="search" name="q" value="{{ q }}" placeholder="Search product or batch" aria-label="Search product or batch" class="input pl-9">
+  </div>
+  {% if kind %}<input type="hidden" name="kind" value="{{ kind }}">{% endif %}
+  <div class="tabs" role="tablist" aria-label="Filter">
+    <a class="tab {% if not kind %}tab-active{% endif %}" href="?{% if q %}q={{ q|urlencode }}{% endif %}">All</a>
+    <a class="tab {% if kind == 'menu' %}tab-active{% endif %}" href="?kind=menu{% if q %}&q={{ q|urlencode }}{% endif %}">Menu</a>
+    <a class="tab {% if kind == 'ingredient' %}tab-active{% endif %}" href="?kind=ingredient{% if q %}&q={{ q|urlencode }}{% endif %}">Ingredients</a>
+  </div>
+</form>
 
+<div class="space-y-6">
 {% if show_menu %}
-<div class="panel">
-  <p class="eyebrow">Ready to sell</p>
-  <h2 style="margin-bottom:6px">Menu items</h2>
-  <table>
+<section class="card">
+  <div class="card-header"><h2 class="card-title">Menu items</h2><p class="card-description">Prepared items ready to sell.</p></div>
+  <div class="card-content px-0 pb-2"><div class="table-wrap"><table>
     <thead><tr><th>Item</th><th>Price</th><th>On hand</th><th>Status</th></tr></thead>
     <tbody>
     {% for p in menu %}
       <tr>
-        <td><strong>{{ p.name }}</strong>{% if p.category %}<div class="sub">{{ p.category }}</div>{% endif %}</td>
-        <td>₱{{ p.price|floatformat:"-2" }}</td>
-        <td><strong>{{ p.on_hand|floatformat:"-2" }} {{ p.unit }}</strong>{% if p.reorder_level %}<div class="sub">Reorder {{ p.reorder_level|floatformat:"-2" }}</div>{% endif %}</td>
-        <td class="{% if p.status == 'Fresh' %}fresh{% else %}use-first{% endif %}">{{ p.status }}</td>
+        <td><div class="font-medium">{{ p.name }}</div>{% if p.category %}<div class="text-xs text-muted-foreground">{{ p.category }}</div>{% endif %}</td>
+        <td class="tabular-nums">₱{{ p.price|floatformat:"-2" }}</td>
+        <td><div class="font-medium tabular-nums">{{ p.on_hand|floatformat:"-2" }} {{ p.unit }}</div>{% if p.reorder_level %}<div class="text-xs text-muted-foreground">Reorder at {{ p.reorder_level|floatformat:"-2" }}</div>{% endif %}</td>
+        <td>{% include "partials/status.html" with s=p.status %}</td>
       </tr>
     {% empty %}
-      <tr><td colspan="4">{% if q %}No menu items match "{{ q }}".{% else %}No menu items yet.{% endif %}</td></tr>
+      <tr><td colspan="4" class="py-8 text-center text-muted-foreground">{% if q %}No menu items match "{{ q }}".{% else %}No menu items yet.{% endif %}</td></tr>
     {% endfor %}
     </tbody>
-  </table>
-</div>
+  </table></div></div>
+</section>
 {% endif %}
 
 {% if show_ingredients %}
-<div class="panel">
-  <p class="eyebrow">Raw stock · first in, first out</p>
-  <h2 style="margin-bottom:6px">Ingredients</h2>
-  <table>
-    <thead><tr><th>Item</th><th>Expiry</th><th>On hand</th><th>Status</th></tr></thead>
+<section class="card">
+  <div class="card-header"><h2 class="card-title">Ingredients</h2><p class="card-description">Raw stock tracked by batch and expiry date.</p></div>
+  <div class="card-content px-0 pb-2"><div class="table-wrap"><table>
+    <thead><tr><th>Item</th><th>Next expiry</th><th>On hand</th><th>Status</th></tr></thead>
     <tbody>
     {% for p in ingredients %}
       <tr>
-        <td><strong>{{ p.name }}</strong>{% if p.category %}<div class="sub">{{ p.category }}</div>{% endif %}</td>
-        <td>{{ p.next_expiry|date:"M d"|default:"—" }}</td>
-        <td><strong>{{ p.on_hand|floatformat:"-2" }} {{ p.unit }}</strong>{% if p.reorder_level %}<div class="sub">Reorder {{ p.reorder_level|floatformat:"-2" }}</div>{% endif %}</td>
-        <td class="{% if p.status == 'Fresh' %}fresh{% else %}use-first{% endif %}">{{ p.status }}</td>
+        <td><div class="font-medium">{{ p.name }}</div>{% if p.category %}<div class="text-xs text-muted-foreground">{{ p.category }}</div>{% endif %}</td>
+        <td class="tabular-nums">{{ p.next_expiry|date:"M d"|default:"—" }}</td>
+        <td><div class="font-medium tabular-nums">{{ p.on_hand|floatformat:"-2" }} {{ p.unit }}</div>{% if p.reorder_level %}<div class="text-xs text-muted-foreground">Reorder at {{ p.reorder_level|floatformat:"-2" }}</div>{% endif %}</td>
+        <td>{% include "partials/status.html" with s=p.status %}</td>
       </tr>
     {% empty %}
-      <tr><td colspan="4">{% if q %}No ingredients match "{{ q }}".{% else %}No ingredients yet.{% endif %}</td></tr>
+      <tr><td colspan="4" class="py-8 text-center text-muted-foreground">{% if q %}No ingredients match "{{ q }}".{% else %}No ingredients yet.{% endif %}</td></tr>
     {% endfor %}
     </tbody>
-  </table>
-</div>
+  </table></div></div>
+</section>
 {% endif %}
+</div>
 {% endblock %}
