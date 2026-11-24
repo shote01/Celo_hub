@@ -49,6 +49,7 @@ def nav_items(context):
             item("Customers", "users", "sales:customers", "/sales/customers/")
         )
         groups[2]["items"].extend([
+            item("Employees", "briefcase", "finance:employees", "/finance/employees/"),
             item("Expenses", "receipt", "finance:expenses", "/finance/expenses/"),
             item("Payroll", "wallet", "finance:payroll", "/finance/payroll/"),
         ])
@@ -60,11 +61,16 @@ def nav_items(context):
             ],
         })
 
+    # Highlight only the most specific match (so /sales/customers/ lights up Customers, not Sales too).
+    best = None
     for group in groups:
         for nav_item in group["items"]:
-            nav_item["active"] = (
-                (nav_item["href"] == "/" and path == "/")
-                or (nav_item["href"] != "/" and path.startswith(nav_item["href"]))
-            )
+            href = nav_item["href"]
+            matches = path == "/" if href == "/" else path.startswith(href)
+            if matches and (best is None or len(href) > len(best["href"])):
+                best = nav_item
+            nav_item["active"] = False
+    if best is not None:
+        best["active"] = True
 
     return groups

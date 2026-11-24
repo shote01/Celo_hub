@@ -90,6 +90,7 @@ class PayrollRecord(models.Model):
     class PayType(models.TextChoices):
         FIXED = "fixed", "Fixed Amount"
         PERCENTAGE = "percentage", "Percentage of Gross Sales"
+        ATTENDANCE = "attendance", "Attendance (days present × daily rate)"
 
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="payroll_records")
     pay_type = models.CharField(max_length=12, choices=PayType.choices, default=PayType.FIXED)
@@ -100,6 +101,9 @@ class PayrollRecord(models.Model):
     advance_deducted = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     net_pay = models.DecimalField(max_digits=12, decimal_places=2)
     created_at = models.DateTimeField(default=timezone.now)
+    # Snapshot of the employee's attendance in the period when this record was made.
+    days_worked = models.PositiveSmallIntegerField(default=0)
+    hours_worked = models.DecimalField(max_digits=7, decimal_places=2, default=0)
 
     class Meta:
         ordering = ["-created_at"]

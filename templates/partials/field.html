@@ -1,0 +1,11 @@
+{# One form field in the shadcn style. Usage: {% include "partials/field.html" with f=form.name %} #}
+<div class="field {{ extra }}">
+  {% if f.field.widget.input_type == "checkbox" %}
+    <label for="{{ f.id_for_label }}" class="flex items-center gap-2">{{ f }}<span>{{ f.label }}</span></label>
+  {% else %}
+    <label for="{{ f.id_for_label }}">{{ f.label }}</label>
+    {{ f }}
+  {% endif %}
+  {% if f.help_text %}<span class="help">{{ f.help_text|safe }}</span>{% endif %}
+  {{ f.errors }}
+</div>
