@@ -1,0 +1,52 @@
+{% extends "base.html" %}{% load humanize %}
+{% block title %}Employees{% endblock %}
+{% block page_title %}Employees{% endblock %}
+{% block page_desc %}Manage staff profiles, logins and pay. Attendance shown for {{ start|date:"M d" }} – {{ end|date:"M d" }}.{% endblock %}
+{% block actions %}
+  <a class="btn btn-outline" href="{% url 'finance:user_new' %}">{% include "partials/icon.html" with name="userplus" %}Add a user</a>
+  <a class="btn btn-primary" href="{% url 'finance:employee_new' %}">{% include "partials/icon.html" with name="plus" %}Add employee</a>
+{% endblock %}
+{% block content %}
+<form method="get" class="mb-5 flex flex-wrap items-center gap-3">
+  <div class="relative min-w-[220px] flex-1">
+    <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{% include "partials/icon.html" with name="search" %}</span>
+    <input type="search" name="q" value="{{ q }}" placeholder="Search name or position" aria-label="Search employees" class="input pl-9">
+  </div>
+  <input type="hidden" name="status" value="{{ status }}">
+  <div class="tabs">
+    <a class="tab {% if status == 'active' %}tab-active{% endif %}" href="?status=active{% if q %}&q={{ q|urlencode }}{% endif %}">Active · {{ counts.active }}</a>
+    <a class="tab {% if status == 'inactive' %}tab-active{% endif %}" href="?status=inactive{% if q %}&q={{ q|urlencode }}{% endif %}">Inactive · {{ counts.inactive }}</a>
+    <a class="tab {% if status == 'all' %}tab-active{% endif %}" href="?status=all{% if q %}&q={{ q|urlencode }}{% endif %}">All</a>
+  </div>
+</form>
+
+<section class="card"><div class="table-wrap py-2"><table>
+  <thead><tr><th>Employee</th><th>Login</th><th class="num">Base pay</th><th>Attendance</th><th class="num">Advance</th><th></th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr {% if not r.emp.is_active %}class="opacity-60"{% endif %}>
+      <td><div class="font-medium">{{ r.emp.name }}{% if not r.emp.is_active %} <span class="badge badge-muted ml-1">Inactive</span>{% endif %}</div>
+          <div class="text-xs text-muted-foreground">{{ r.emp.position|default:"No position" }}</div></td>
+      <td>{% if r.emp.user %}<span class="badge badge-cyan">{{ r.emp.user.username }}</span><div class="mt-1 text-xs text-muted-foreground">{{ r.emp.user.get_role_display }}</div>
+          {% else %}<span class="badge badge-amber">No login</span>{% endif %}</td>
+      <td class="num"><div class="font-medium">₱{{ r.emp.salary|floatformat:"-2"|intcomma }}</div><div class="text-xs text-muted-foreground">₱{{ r.att.daily_rate|floatformat:"-2"|intcomma }} / day</div></td>
+      <td><div class="font-medium tabular-nums">{{ r.att.days }} day{{ r.att.days|pluralize }}</div>
+          <div class="text-xs text-muted-foreground">{{ r.att.hours|floatformat:"-2" }} h{% if r.att.incomplete %} · <span class="font-medium text-warning">{{ r.att.incomplete }} no time-out</span>{% endif %}</div></td>
+      <td class="num">{% if r.advance %}<span class="badge badge-amber">₱{{ r.advance|floatformat:"-2"|intcomma }}</span>{% else %}<span class="text-muted-foreground">—</span>{% endif %}</td>
+      <td class="num whitespace-nowrap">
+        {% if r.emp.is_active %}<a class="btn btn-secondary btn-sm" href="{% url 'finance:payroll_new' %}?employee={{ r.emp.pk }}">Pay</a>{% endif %}
+        <a class="btn btn-outline btn-sm" href="{% url 'finance:employee_edit' r.emp.pk %}">Edit</a>
+        <form method="post" action="{% url 'finance:employee_toggle' r.emp.pk %}" class="inline">{% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button type="submit" class="btn btn-ghost btn-sm">{% if r.emp.is_active %}Deactivate{% else %}Reactivate{% endif %}</button>
+        </form>
+        <a class="btn btn-ghost btn-icon btn-sm text-destructive hover:text-destructive" href="{% url 'finance:employee_delete' r.emp.pk %}" aria-label="Delete {{ r.emp.name }}">{% include "partials/icon.html" with name="trash" %}</a>
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="6" class="py-12 text-center text-muted-foreground">{% if q %}No employees match "{{ q }}".{% else %}No employees here yet. Use "Add employee" to create the first one.{% endif %}</td></tr>
+  {% endfor %}
+  </tbody>
+</table></div></section>
+<p class="mt-3 text-xs text-muted-foreground">Employees with payroll or attendance history can't be deleted. Deactivate them instead: they stay in reports but disappear from the payroll form.</p>
+{% endblock %}

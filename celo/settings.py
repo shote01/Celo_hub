@@ -111,6 +111,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Business rules
 CELO_FIFO_WARNING_DAYS = 3      # batches expiring within N days are "Use first"
 CELO_PAYROLL_PERIOD_DAYS = 15   # net profit is computed every 15 days (charter)
+CELO_WORK_DAYS_PER_PERIOD = 13   # attendance pay: daily rate = salary / this many working days
 
 if not DEBUG:
     SESSION_COOKIE_SECURE = True

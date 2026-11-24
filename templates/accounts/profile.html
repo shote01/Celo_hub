@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Profile settings{% endblock %}
+{% block page_title %}Profile settings{% endblock %}
+{% block page_desc %}Update your name and keep your account secure.{% endblock %}
+{% block content %}
+<div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+  <form method="post" class="card">{% csrf_token %}
+    <div class="card-header"><h2 class="card-title">Personal details</h2><p class="card-description">This is the name shown in the sidebar, on receipts and in the audit log.</p></div>
+    <div class="card-content">
+      {% if form.non_field_errors %}<div class="alert alert-error mb-4">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+      <div class="grid gap-x-4 sm:grid-cols-2">
+        {% include "partials/field.html" with f=form.first_name %}
+        {% include "partials/field.html" with f=form.last_name %}
+      </div>
+      {% include "partials/field.html" with f=form.email %}
+    </div>
+    <div class="card-footer pt-4"><button class="btn btn-primary" type="submit">Save changes</button></div>
+  </form>
+
+  <div class="space-y-6">
+    <section class="card">
+      <div class="card-header"><h2 class="card-title">Account</h2></div>
+      <dl class="card-content divide-y text-sm">
+        <div class="flex items-center justify-between py-2.5"><dt class="text-muted-foreground">Username</dt><dd class="font-medium">{{ user.username }}</dd></div>
+        <div class="flex items-center justify-between py-2.5"><dt class="text-muted-foreground">Access</dt><dd><span class="badge {% if user.is_celo_admin %}badge-cyan{% else %}badge-muted{% endif %}">{{ user.get_role_display }}</span></dd></div>
+        <div class="flex items-center justify-between py-2.5"><dt class="text-muted-foreground">Employee profile</dt>
+          <dd class="text-right">{% if employee %}<span class="font-medium">{{ employee.name }}</span>{% if employee.position %}<span class="block text-xs text-muted-foreground">{{ employee.position }}</span>{% endif %}{% else %}<span class="text-muted-foreground">Not linked</span>{% endif %}</dd></div>
+      </dl>
+      <p class="px-5 pb-5 text-xs text-muted-foreground">Your username and access level are set by an administrator.</p>
+    </section>
+
+    <section class="card">
+      <div class="card-header"><h2 class="card-title">Password</h2><p class="card-description">Choose a strong password you don't use anywhere else.</p></div>
+      <div class="card-footer justify-start pt-0"><a class="btn btn-outline" href="{% url 'accounts:password_change' %}">{% include "partials/icon.html" with name="key" %}Change password</a></div>
+    </section>
+  </div>
+</div>
+{% endblock %}

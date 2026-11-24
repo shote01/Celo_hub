@@ -1,0 +1,70 @@
+{% extends "base.html" %}{% load humanize %}
+{% block title %}Payroll record{% endblock %}
+{% block page_title %}New payroll record{% endblock %}
+{% block page_desc %}Period {{ start|date:"M d" }} – {{ end|date:"M d, Y" }}. Cash advances are deducted automatically.{% endblock %}
+{% block content %}
+<div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+  <form method="post" class="card">{% csrf_token %}
+    <div class="card-header"><h2 class="card-title">Pay details</h2></div>
+    <div class="card-content">
+      {% if form.non_field_errors %}<div class="alert alert-error mb-4">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+      {% include "partials/field.html" with f=form.employee %}
+      {% include "partials/field.html" with f=form.pay_type %}
+      <div id="value-field">{% include "partials/field.html" with f=form.value %}</div>
+      <div id="attendance-note" class="hidden rounded-lg border border-brand/40 bg-accent/60 p-3 text-sm text-accent-foreground">
+        Pay is worked out from attendance: <strong>days present × daily rate</strong>. No amount to enter.
+      </div>
+    </div>
+    <div class="card-footer pt-4">
+      <a class="btn btn-outline" href="{% url 'finance:payroll' %}">Cancel</a>
+      <button class="btn btn-primary" type="submit">Save record</button>
+    </div>
+  </form>
+
+  <section class="card" aria-live="polite">
+    <div class="card-header"><h2 class="card-title">Attendance this period</h2><p class="card-description" id="s-name">Select an employee to see their attendance.</p></div>
+    <dl class="card-content hidden divide-y text-sm" id="summary">
+      <div class="flex justify-between py-2.5"><dt class="text-muted-foreground">Days present</dt><dd class="font-semibold tabular-nums" id="s-days"></dd></div>
+      <div class="flex justify-between py-2.5"><dt class="text-muted-foreground">Hours worked (net of break)</dt><dd class="font-semibold tabular-nums" id="s-hours"></dd></div>
+      <div id="s-warn" class="hidden py-2.5"><div class="alert alert-info border-warning/40 bg-warning/10 text-warning">
+        <span id="s-incomplete"></span> day(s) have no time-out. They still count as present.</div></div>
+      <div class="flex justify-between py-2.5"><dt class="text-muted-foreground">Base pay (per period)</dt><dd class="tabular-nums" id="s-salary"></dd></div>
+      <div class="flex justify-between py-2.5"><dt class="text-muted-foreground">Daily rate (base ÷ {{ workdays|floatformat:"-0" }} days)</dt><dd class="tabular-nums" id="s-rate"></dd></div>
+      <div class="flex justify-between py-2.5"><dt class="text-muted-foreground">Outstanding cash advance</dt><dd class="tabular-nums" id="s-advance"></dd></div>
+      <div class="flex items-baseline justify-between pt-4"><dt class="font-semibold">Attendance pay</dt><dd class="text-2xl font-semibold tabular-nums" id="s-estimate"></dd></div>
+    </dl>
+  </section>
+</div>
+
+{{ summaries|json_script:"att-data" }}
+<script>
+(function () {
+  const data = JSON.parse(document.getElementById('att-data').textContent);
+  const emp = document.getElementById('id_employee'), type = document.getElementById('id_pay_type');
+  const $ = id => document.getElementById(id);
+  const peso = v => '₱' + Number(v).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+  function render() {
+    const d = data[emp.value];
+    $('summary').classList.toggle('hidden', !d);
+    $('s-name').textContent = d ? d.name : 'Select an employee to see their attendance.';
+    if (d) {
+      $('s-days').textContent = d.days;
+      $('s-hours').textContent = Number(d.hours).toLocaleString('en-PH', {minimumFractionDigits: 2}) + ' h';
+      $('s-warn').classList.toggle('hidden', !d.incomplete);
+      $('s-incomplete').textContent = d.incomplete;
+      $('s-salary').textContent = peso(d.salary);
+      $('s-rate').textContent = peso(d.daily_rate);
+      $('s-advance').textContent = peso(d.advance);
+      $('s-estimate').textContent = peso(d.estimate);
+    }
+    const byAttendance = type.value === 'attendance';
+    $('value-field').classList.toggle('hidden', byAttendance);
+    $('attendance-note').classList.toggle('hidden', !byAttendance);
+  }
+  emp.addEventListener('change', render);
+  type.addEventListener('change', render);
+  render();
+})();
+</script>
+{% endblock %}

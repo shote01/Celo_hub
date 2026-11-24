@@ -1,7 +1,10 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from accounts.models import AuditLog
 from accounts.permissions import admin_required
@@ -120,15 +123,32 @@ def expense_delete(request, pk):
 
 
 # ---- payroll & cash advances ----------------------------------------------
+def _summaries(employees, start, end):
+    """Attendance + pay figures per employee, as plain strings (used by the payroll form's live preview)."""
+    out = {}
+    for emp in employees:
+        att = services.attendance_summary(emp, start, end)
+        out[str(emp.pk)] = {
+            "name": emp.name, "salary": str(emp.salary), "daily_rate": str(att["daily_rate"]),
+            "days": att["days"], "hours": str(att["hours"]), "incomplete": att["incomplete"],
+            "estimate": str(att["estimate"]), "advance": str(emp.outstanding_advance),
+        }
+    return out
+
+
 @admin_required
 def payroll_list(request):
-    employees = Employee.objects.filter(is_active=True).prefetch_related("payroll_records")
+    start, end = services.current_period()
+    employees = Employee.objects.filter(is_active=True).prefetch_related("payroll_records").select_related("user")
     rows = []
     for emp in employees:
-        last = emp.payroll_records.first()
-        rows.append({"emp": emp, "last": last, "advance": emp.outstanding_advance})
+        rows.append({
+            "emp": emp, "last": emp.payroll_records.first(), "advance": emp.outstanding_advance,
+            "att": services.attendance_summary(emp, start, end),
+        })
     return render(request, "finance/payroll_list.html", {
         "rows": rows, "records": PayrollRecord.objects.select_related("employee")[:30],
+        "start": start, "end": end, "workdays": services.workdays_per_period(),
     })
 
 
@@ -145,14 +165,27 @@ def user_new(request):
 
 @admin_required
 def payroll_new(request):
-    form = PayrollForm(request.POST or None)
+    start, end = services.current_period()
+    employees = list(Employee.objects.filter(is_active=True))
+    initial = {}
+    preselected = request.GET.get("employee", "")
+    if preselected.isdigit() and any(e.pk == int(preselected) for e in employees):
+        initial["employee"] = int(preselected)
+    form = PayrollForm(request.POST or None, initial=initial)
     if request.method == "POST" and form.is_valid():
         d = form.cleaned_data
-        rec = services.create_payroll(employee=d["employee"], pay_type=d["pay_type"], value=d["value"])
-        AuditLog.record(request.user, "Payroll record", f"{rec.employee} net PHP {rec.net_pay}")
-        messages.success(request, f"{rec.employee}: PHP {rec.amount} less advances PHP {rec.advance_deducted} = PHP {rec.net_pay}.")
-        return redirect("finance:payroll")
-    return _form_page(request, form, "Employee payroll record", "finance:payroll")
+        try:
+            rec = services.create_payroll(employee=d["employee"], pay_type=d["pay_type"], value=d["value"])
+        except ValueError as exc:      # business-rule errors are shown on the form, not as a 500 page
+            form.add_error(None, str(exc))
+        else:
+            AuditLog.record(request.user, "Payroll record", f"{rec.employee} net PHP {rec.net_pay}")
+            messages.success(request, f"{rec.employee}: PHP {rec.amount} less advances PHP {rec.advance_deducted} = PHP {rec.net_pay}.")
+            return redirect("finance:payroll")
+    return render(request, "finance/payroll_form.html", {
+        "form": form, "summaries": _summaries(employees, start, end), "start": start, "end": end,
+        "workdays": services.workdays_per_period(),
+    })
 
 
 @admin_required
@@ -175,11 +208,70 @@ def advance_new(request):
     return _form_page(request, form, "Cash advance", "finance:payroll")
 
 
+# ---- employee management ---------------------------------------------------
+@admin_required
+def employee_list(request):
+    status = request.GET.get("status", "active")
+    q = request.GET.get("q", "").strip()
+    employees = Employee.objects.select_related("user")
+    if status == "active":
+        employees = employees.filter(is_active=True)
+    elif status == "inactive":
+        employees = employees.filter(is_active=False)
+    else:
+        status = "all"
+    if q:
+        employees = employees.filter(Q(name__icontains=q) | Q(position__icontains=q))
+    start, end = services.current_period()
+    rows = [{"emp": e, "att": services.attendance_summary(e, start, end), "advance": e.outstanding_advance}
+            for e in employees]
+    return render(request, "finance/employee_list.html", {
+        "rows": rows, "status": status, "q": q, "start": start, "end": end,
+        "counts": {"active": Employee.objects.filter(is_active=True).count(),
+                   "inactive": Employee.objects.filter(is_active=False).count()},
+    })
+
+
 @admin_required
 def employee_edit(request, pk=None):
     emp = get_object_or_404(Employee, pk=pk) if pk else None
     form = EmployeeForm(request.POST or None, instance=emp)
     if request.method == "POST" and form.is_valid():
-        form.save()
-        return redirect("finance:payroll")
-    return _form_page(request, form, "Edit employee" if emp else "Add employee", "finance:payroll")
+        saved = form.save()
+        AuditLog.record(request.user, "Updated employee" if emp else "Added employee", saved.name)
+        if form.created_user:
+            AuditLog.record(request.user, "Created user", f"{form.created_user.username} ({form.created_user.get_role_display()})")
+            messages.success(request, f"{saved.name} was added with login '{form.created_user.username}'.")
+        else:
+            messages.success(request, f"{saved.name} was {'updated' if emp else 'added'}.")
+        return redirect("finance:employees")
+    return render(request, "finance/employee_form.html", {"form": form, "employee": emp})
+
+
+@admin_required
+@require_POST
+def employee_toggle(request, pk):
+    emp = get_object_or_404(Employee, pk=pk)
+    emp.is_active = not emp.is_active
+    emp.save(update_fields=["is_active"])
+    AuditLog.record(request.user, "Reactivated employee" if emp.is_active else "Deactivated employee", emp.name)
+    messages.success(request, f"{emp.name} is now {'active' if emp.is_active else 'inactive'}.")
+    target = request.POST.get("next", "")
+    if target and url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()}):
+        return redirect(target)
+    return redirect("finance:employees")
+
+
+@admin_required
+def employee_delete(request, pk):
+    emp = get_object_or_404(Employee, pk=pk)
+    has_history = (emp.payroll_records.exists() or emp.advances.exists() or emp.attendance_records.exists())
+    if has_history:
+        messages.error(request, f"{emp.name} has payroll or attendance history, so it can't be deleted. Deactivate the employee instead.")
+        return redirect("finance:employees")
+    if request.method == "POST":
+        AuditLog.record(request.user, "Deleted employee", emp.name)
+        emp.delete()
+        messages.success(request, f"{emp.name} was deleted.")
+        return redirect("finance:employees")
+    return render(request, "confirm_delete.html", {"object": emp, "cancel_url": "finance:employees"})

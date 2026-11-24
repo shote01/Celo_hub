@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{% if employee %}Edit employee{% else %}Add employee{% endif %}{% endblock %}
+{% block header %}{% endblock %}
+{% block content %}
+<div class="mx-auto w-full max-w-xl">
+  <form method="post" class="card" id="employee-form">{% csrf_token %}
+    <div class="card-header">
+      <h1 class="card-title text-xl">{% if employee %}Edit {{ employee.name }}{% else %}Add employee{% endif %}</h1>
+      <p class="card-description">Base pay is for one 15-day period. Attendance pay uses it to work out a daily rate.</p>
+    </div>
+    <div class="card-content">
+      {% if form.non_field_errors %}<div class="alert alert-error mb-4">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+      <div class="grid gap-x-4 sm:grid-cols-2">
+        {% include "partials/field.html" with f=form.name %}
+        {% include "partials/field.html" with f=form.position %}
+        {% include "partials/field.html" with f=form.salary %}
+        {% include "partials/field.html" with f=form.is_active %}
+      </div>
+
+      <div id="link-existing">{% include "partials/field.html" with f=form.user %}</div>
+
+      {% if not employee %}
+      <div class="mt-2 rounded-lg border bg-muted/40 p-4">
+        {% include "partials/field.html" with f=form.create_login extra="mb-0" %}
+        <div id="login-fields" class="mt-4">
+          <p class="mb-3 text-xs text-muted-foreground">Creates a login so this employee can sign in, use Attendance and see their own sales.</p>
+          <div class="grid gap-x-4 sm:grid-cols-2">
+            {% include "partials/field.html" with f=form.username %}
+            {% include "partials/field.html" with f=form.role %}
+          </div>
+          {% include "partials/field.html" with f=form.password extra="mb-0" %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    <div class="card-footer pt-4">
+      <a class="btn btn-outline" href="{% url 'finance:employees' %}">Cancel</a>
+      <button class="btn btn-primary" type="submit">{% if employee %}Save changes{% else %}Add employee{% endif %}</button>
+    </div>
+  </form>
+</div>
+<script>
+(function () {
+  const box = document.getElementById('id_create_login');
+  if (!box) return;
+  const fields = document.getElementById('login-fields'), existing = document.getElementById('link-existing');
+  function sync() {
+    fields.classList.toggle('hidden', !box.checked);
+    existing.classList.toggle('hidden', box.checked);
+  }
+  box.addEventListener('change', sync); sync();
+})();
+</script>
+{% endblock %}

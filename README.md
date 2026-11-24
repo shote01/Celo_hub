@@ -23,3 +23,11 @@ Create real users in `/admin/` and set their **Role** (Admin or Staff). Change t
 | Daily/weekly/monthly/yearly reports, bestsellers | `dashboard/services.py`, `/reports/` (+ CSV) |
 | Login & roles, audit log | `accounts` User.role, AuditLog, `/audit/` |
 | Customer lookup & profiles | `sales` Customer, `/sales/customers/` |
+
+## Profile, employees and attendance pay
+* **Profile settings** (`/account/profile/`, any user): change your name/email and your password. Click your name at the bottom of the sidebar.
+* **Employees** (`/finance/employees/`, admin): add, edit, deactivate/reactivate or delete employees. When adding, an admin can create the
+  employee's login at the same time. Employees with payroll or attendance history can only be deactivated, never deleted.
+* **Attendance pay**: payroll can now be paid as *Attendance*. Daily rate = base salary / `CELO_WORK_DAYS_PER_PERIOD` (13, see settings);
+  pay = daily rate x days present in the current 15-day period. A day counts once the employee timed in, even if they forgot to time out
+  (those days are flagged). Every payroll record also stores the days and hours worked. Apply with `python manage.py migrate` (finance 0004).

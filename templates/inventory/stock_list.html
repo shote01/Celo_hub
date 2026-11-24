@@ -3,7 +3,8 @@
 {% block page_title %}Stock &amp; expiration{% endblock %}
 {% block page_desc %}Real-time FIFO ledger. Oldest or soonest-expiring stock is used first.{% endblock %}
 {% block actions %}
-  <a class="btn btn-outline" href="{% url 'inventory:waste_new' %}">Log waste</a>
+  {% if user.is_celo_admin %}<a class="btn btn-outline" href="{% url 'inventory:products' %}">{% include "partials/icon.html" with name="utensils" %}Products &amp; menu</a>{% endif %}
+  <a class="btn btn-outline" href="{% url 'inventory:waste' %}">{% include "partials/icon.html" with name="trash" %}Waste log</a>
   <a class="btn btn-primary" href="{% url 'inventory:receive' %}">{% include "partials/icon.html" with name="plus" %}Receive stock</a>
 {% endblock %}
 {% block content %}
