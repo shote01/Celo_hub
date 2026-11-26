@@ -33,16 +33,24 @@
         </div>
       {% endfor %}
     </nav>
-    <div class="border-t border-white/15 p-3">
-      <a href="{% url 'accounts:profile' %}" title="Profile settings"
-         class="flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-white/10 {% if request.resolver_match.app_name == 'accounts' %}bg-white/10{% endif %}">
+    <div class="relative border-t border-white/15 p-3">
+      <div id="profile-menu" role="menu" aria-labelledby="profile-btn" hidden
+           class="absolute inset-x-3 bottom-full z-50 mb-2 rounded-lg border bg-card p-1 text-card-foreground shadow-lg">
+        <a role="menuitem" href="{% url 'accounts:profile' %}"
+           class="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:outline-none">
+          {% include "partials/icon.html" with name="user" %}Profile settings</a>
+        <form method="post" action="{% url 'logout' %}" role="none">{% csrf_token %}
+          <button role="menuitem" type="submit"
+                  class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:outline-none">
+            {% include "partials/icon.html" with name="logout" %}Log out</button>
+        </form>
+      </div>
+      <button type="button" id="profile-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="profile-menu"
+              class="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left transition-colors hover:bg-white/10 {% if request.resolver_match.app_name == 'accounts' %}bg-white/10{% endif %}">
         <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/15 text-sm font-semibold">{{ user.username|slice:":1"|upper }}</span>
-        <span class="min-w-0 text-sm leading-tight"><span class="block truncate font-medium">{{ user.get_full_name|default:user.username }}</span><span class="block text-xs text-white/70">{{ user.get_role_display }} · Profile settings</span></span>
-      </a>
-      <form method="post" action="{% url 'logout' %}">{% csrf_token %}
-        <button type="submit" class="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white">
-          {% include "partials/icon.html" with name="logout" %}Log out</button>
-      </form>
+        <span class="min-w-0 flex-1 text-sm leading-tight"><span class="block truncate font-medium">{{ user.get_full_name|default:user.username }}</span><span class="block text-xs text-white/70">{{ user.get_role_display }}</span></span>
+        {% include "partials/icon.html" with name="updown" %}
+      </button>
     </div>
   </aside>
 {% endif %}
@@ -81,6 +89,22 @@
     open.addEventListener('click', () => set(true));
     scrim.addEventListener('click', () => set(false));
     document.addEventListener('keydown', e => { if (e.key === 'Escape') set(false); });
+  })();
+</script>
+<script>
+  (function () {
+    const btn = document.getElementById('profile-btn'), menu = document.getElementById('profile-menu');
+    if (!btn || !menu) return;
+    function setOpen(on) {
+      menu.hidden = !on;
+      btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+      if (on) { const first = menu.querySelector('[role=menuitem]'); if (first) first.focus(); }
+    }
+    btn.addEventListener('click', e => { e.stopPropagation(); setOpen(menu.hidden); });
+    document.addEventListener('click', e => { if (!menu.hidden && !menu.contains(e.target)) setOpen(false); });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !menu.hidden) { setOpen(false); btn.focus(); }
+    });
   })();
 </script>
 </body>
