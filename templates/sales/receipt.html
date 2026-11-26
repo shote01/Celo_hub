@@ -15,7 +15,7 @@
     <hr class="my-3 border-dashed border-foreground/40">
     <div class="flex justify-between text-base font-bold"><span>TOTAL</span><span>₱{{ order.total|floatformat:2|intcomma }}</span></div>
     <hr class="my-3 border-dashed border-foreground/40">
-    <p class="text-center">Cashier: {{ order.created_by.get_full_name|default:order.created_by.username }}<br>Thank you!</p>
+    <p class="text-center">Thank you!</p>
   </div>
   <div class="mt-4 flex flex-wrap justify-center gap-2 print:hidden">
     <a class="btn btn-outline" href="{% url 'sales:list' %}">Back to sales</a>
