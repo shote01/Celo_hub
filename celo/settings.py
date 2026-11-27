@@ -1,15 +1,26 @@
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # In production set DJANGO_SECRET_KEY and DJANGO_DEBUG=0 in the environment.
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-change-me")
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
-ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",")
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-change-me")
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",")
+    if host.strip()
+]
+
+if not DEBUG:
+    if SECRET_KEY == "dev-only-change-me":
+        raise ImproperlyConfigured("Set DJANGO_SECRET_KEY for deployment.")
+    if not ALLOWED_HOSTS or "*" in ALLOWED_HOSTS:
+        raise ImproperlyConfigured("Set DJANGO_ALLOWED_HOSTS to your deployment host.")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -36,6 +47,9 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+if not DEBUG:
+    MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
+
 ROOT_URLCONF = "celo.urls"
 
 TEMPLATES = [
@@ -56,9 +70,34 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "celo.wsgi.application"
 
-# Default to SQLite for local development so the app works out of the box without a
-# MySQL server timezone setup. Set DB_ENGINE=mysql or DB_HOST to opt back into MySQL.
-if os.environ.get("DB_ENGINE") == "mysql" or os.environ.get("DB_HOST"):
+# Default to SQLite locally; DB_HOST retains the existing MySQL opt-in behavior.
+DB_ENGINE = os.environ.get("DB_ENGINE")
+if DB_ENGINE is None:
+    DB_ENGINE = "mysql" if os.environ.get("DB_HOST") else "sqlite"
+
+if not DEBUG and DB_ENGINE != "postgresql":
+    raise ImproperlyConfigured("Set DB_ENGINE=postgresql for deployment.")
+
+if DB_ENGINE == "postgresql":
+    required_db_settings = ("DB_NAME", "DB_USER", "DB_PASSWORD", "DB_HOST")
+    missing_db_settings = [
+        name for name in required_db_settings if not os.environ.get(name)
+    ]
+    if missing_db_settings:
+        raise ImproperlyConfigured(
+            "Set the PostgreSQL connection settings: " + ", ".join(missing_db_settings)
+        )
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.environ["DB_NAME"],
+            "USER": os.environ["DB_USER"],
+            "PASSWORD": os.environ["DB_PASSWORD"],
+            "HOST": os.environ["DB_HOST"],
+            "PORT": os.environ.get("DB_PORT", "5432"),
+        }
+    }
+elif DB_ENGINE == "mysql":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.mysql",
@@ -73,15 +112,17 @@ if os.environ.get("DB_ENGINE") == "mysql" or os.environ.get("DB_HOST"):
             },
         }
     }
-else:
+elif DB_ENGINE == "sqlite":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",
         }
     }
-# For the cloud deployment named in the charter, switch to PostgreSQL:
-# "ENGINE": "django.db.backends.postgresql", NAME/USER/PASSWORD/HOST from env.
+else:
+    raise ImproperlyConfigured(
+        "Unsupported DB_ENGINE. Choose sqlite, mysql, or postgresql."
+    )
 
 AUTH_USER_MODEL = "accounts.User"
 LOGIN_URL = "login"
@@ -116,3 +157,4 @@ CELO_WORK_DAYS_PER_PERIOD = 13   # attendance pay: daily rate = salary / this ma
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
