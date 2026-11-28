@@ -10,11 +10,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # In production set DJANGO_SECRET_KEY and DJANGO_DEBUG=0 in the environment.
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-change-me")
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",")
-    if host.strip()
-]
+ALLOWED_HOSTS = ["celo-hub.onrender.com"]
 
 if not DEBUG:
     if SECRET_KEY == "dev-only-change-me":
