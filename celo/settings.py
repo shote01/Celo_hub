@@ -21,6 +21,9 @@ if not DEBUG:
         raise ImproperlyConfigured("Set DJANGO_SECRET_KEY for deployment.")
     if not ALLOWED_HOSTS or "*" in ALLOWED_HOSTS:
         raise ImproperlyConfigured("Set DJANGO_ALLOWED_HOSTS to your deployment host.")
+        CSRF_TRUSTED_ORIGINS = [
+    "https://celo-hub.onrender.com",
+]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
